@@ -89,6 +89,10 @@ const LINKS: SidebarItem[] = [
         title: () => translate('Blocklist'),
         to: '/activity/blocklist',
       },
+      {
+        title: () => translate('Unmapped'),
+        to: '/activity/unmapped',
+      },
     ],
   },
 
