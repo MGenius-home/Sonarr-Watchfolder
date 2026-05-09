@@ -1,20 +1,24 @@
-# STAGE 1: Build
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# STAGE 1: Build Frontend
+FROM node:20 AS frontend-build
 WORKDIR /src
-
-# Copy the frontend and build it (assuming node/yarn is needed if we wanted to build it properly, 
-# but for this we'll just build the dotnet project. Note that in a real scenario we'd build the yarn frontend first.
-# For simplicity and given the spec, we will just publish the .NET app)
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
 COPY . .
+RUN yarn build
 
-# Publish the .NET application
-RUN dotnet publish src/NzbDrone.Console/NzbDrone.Console.csproj -c Release -o /app/out
+# STAGE 2: Build Backend
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-build
+WORKDIR /src
+COPY . .
+RUN dotnet publish src/NzbDrone.Console/Sonarr.Console.csproj -c Release -o /app/out
 
-# STAGE 2: Runtime
-FROM ubuntu:24.04
-RUN apt-get update && apt-get install -y libicu-dev libsqlite3-0 curl
+# STAGE 3: Runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+# Sonarr runtime dependencies
+RUN apt-get update && apt-get update && apt-get install -y libsqlite3-0 curl tzdata mediainfo
 WORKDIR /app
-COPY --from=build /app/out .
+COPY --from=backend-build /app/out .
+COPY --from=frontend-build /src/_output/UI ./UI
 
 # Volume configuration
 VOLUME ["/config", "/tv", "/watch"]
