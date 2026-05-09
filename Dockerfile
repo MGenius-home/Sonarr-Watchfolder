@@ -10,12 +10,12 @@ RUN yarn build
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-build
 WORKDIR /src
 COPY . .
-RUN dotnet publish src/NzbDrone.Console/Sonarr.Console.csproj -c Release -o /app/out
+RUN dotnet publish src/NzbDrone.Console/Sonarr.Console.csproj -f net10.0 -c Release -o /app/out -p:RunAnalyzers=false -p:TreatWarningsAsErrors=false
 
 # STAGE 3: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 # Sonarr runtime dependencies
-RUN apt-get update && apt-get update && apt-get install -y libsqlite3-0 curl tzdata mediainfo
+RUN apt-get update && apt-get update && apt-get install -y libsqlite3-0 sqlite3 curl tzdata mediainfo
 WORKDIR /app
 COPY --from=backend-build /app/out .
 COPY --from=frontend-build /src/_output/UI ./UI

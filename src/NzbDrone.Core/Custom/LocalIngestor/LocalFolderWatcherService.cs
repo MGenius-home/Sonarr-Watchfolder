@@ -45,6 +45,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
         public void Execute(LocalWatchScanCommand message)
         {
             var watchFolder = "/watch";
+            _logger.Info("Starting local watch folder scan: {0}", watchFolder);
 
             if (!_diskProvider.FolderExists(watchFolder))
             {

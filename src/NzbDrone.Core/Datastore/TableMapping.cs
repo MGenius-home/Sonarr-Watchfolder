@@ -41,6 +41,7 @@ using NzbDrone.Core.Tags;
 using NzbDrone.Core.ThingiProvider;
 using NzbDrone.Core.Tv;
 using NzbDrone.Core.Update.History;
+using NzbDrone.Core.Custom.LocalIngestor.Models;
 using static Dapper.SqlMapper;
 
 namespace NzbDrone.Core.Datastore
@@ -174,6 +175,8 @@ namespace NzbDrone.Core.Datastore
             Mapper.Entity<ImportListExclusion>("ImportListExclusions").RegisterModel();
 
             Mapper.Entity<AutoTagging.AutoTag>("AutoTagging").RegisterModel();
+
+            Mapper.Entity<LocalWatchBuffer>("LocalWatchBuffer").RegisterModel();
         }
 
         private static void RegisterMappers()

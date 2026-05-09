@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import Table from 'Components/Table/Table';
 import TableBody from 'Components/Table/TableBody';
 import TableRow from 'Components/Table/TableRow';
-import TableCell from 'Components/Table/TableCell';
-import Button from 'Components/Button';
+import TableRowCell from 'Components/Table/Cells/TableRowCell';
+import Button from 'Components/Link/Button';
 import translate from 'Utilities/String/translate';
 import InteractiveImportModal from 'InteractiveImport/InteractiveImportModal';
 
@@ -22,9 +22,9 @@ function UnmappedTable() {
   };
 
   const columns = [
-    { key: 'path', label: 'File Path' },
-    { key: 'status', label: 'Status' },
-    { key: 'actions', label: 'Actions' }
+    { name: 'path', label: 'File Path', isVisible: true },
+    { name: 'status', label: 'Status', isVisible: true },
+    { name: 'actions', label: 'Actions', isVisible: true }
   ];
 
   return (
@@ -33,13 +33,13 @@ function UnmappedTable() {
         <TableBody>
           {mockFiles.map(file => (
             <TableRow key={file.id}>
-              <TableCell>{file.path}</TableCell>
-              <TableCell>{file.status}</TableCell>
-              <TableCell>
+              <TableRowCell>{file.path}</TableRowCell>
+              <TableRowCell>{file.status}</TableRowCell>
+              <TableRowCell>
                 <Button onClick={() => handleManualImport(file.path)}>
-                  {translate('Manual Import')}
+                  {translate('ManualImport')}
                 </Button>
-              </TableCell>
+              </TableRowCell>
             </TableRow>
           ))}
         </TableBody>

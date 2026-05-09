@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFrameworks>net10.0</TargetFrameworks>
@@ -11,5 +11,8 @@
   <ItemGroup>
     <ProjectReference Include="..\NzbDrone.Host\Sonarr.Host.csproj" />
     <ProjectReference Include="..\Sonarr.RuntimePatches\Sonarr.RuntimePatches.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NzbDrone.Mono\Sonarr.Mono.csproj" />
   </ItemGroup>
 </Project>

@@ -18,6 +18,7 @@ using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Tv.Commands;
 using NzbDrone.Core.Update.Commands;
+using NzbDrone.Core.Custom.LocalIngestor;
 
 namespace NzbDrone.Core.Jobs
 {
@@ -131,6 +132,12 @@ namespace NzbDrone.Core.Jobs
                     {
                         Interval = GetRssSyncInterval(),
                         TypeName = typeof(RssSyncCommand).FullName
+                    },
+
+                    new ScheduledTask
+                    {
+                        Interval = 3,
+                        TypeName = typeof(LocalWatchScanCommand).FullName
                     }
                 };
 

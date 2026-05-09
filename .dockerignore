@@ -1,0 +1,11 @@
+.git
+_output
+_temp
+_tests
+config
+tv
+watch
+node_modules
+**/bin
+**/obj
+**/_output
