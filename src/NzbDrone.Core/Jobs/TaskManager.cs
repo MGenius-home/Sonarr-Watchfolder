@@ -136,7 +136,7 @@ namespace NzbDrone.Core.Jobs
 
                     new ScheduledTask
                     {
-                        Interval = 3,
+                        Interval = GetLocalWatchInterval(),
                         TypeName = typeof(LocalWatchScanCommand).FullName
                     }
                 };
@@ -204,6 +204,18 @@ namespace NzbDrone.Core.Jobs
             }
 
             return interval;
+        }
+
+        private int GetLocalWatchInterval()
+        {
+            var envInterval = Environment.GetEnvironmentVariable("SONARR_WATCH_INTERVAL");
+
+            if (int.TryParse(envInterval, out var interval) && interval > 0)
+            {
+                return interval;
+            }
+
+            return 5;
         }
 
         public void Handle(CommandExecutedEvent message)
