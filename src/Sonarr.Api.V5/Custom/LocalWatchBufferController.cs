@@ -7,7 +7,7 @@ using Sonarr.Http;
 
 namespace Sonarr.Api.V5.Custom
 {
-    [V5ApiController]
+    [V5ApiController("localwatchbuffer")]
     public class LocalWatchBufferController : Controller
     {
         private readonly ILocalWatchBufferRepository _repository;
