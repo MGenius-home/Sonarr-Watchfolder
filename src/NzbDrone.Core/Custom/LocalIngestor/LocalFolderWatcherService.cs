@@ -60,10 +60,14 @@ namespace NzbDrone.Core.Custom.LocalIngestor
 
             _logger.Info("Found {0} video files to process", files.Count);
 
+            var processedCount = 0;
             foreach (var file in files)
             {
                 ProcessFile(file);
+                processedCount++;
             }
+
+            _logger.Info("Local watch folder scan completed. Processed: {0}/{1}", processedCount, files.Count);
         }
 
         private void ProcessFile(string path)
@@ -82,6 +86,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
 
                 if (bufferEntry != null && (bufferEntry.Status == LocalWatchStatus.Imported || bufferEntry.Status == LocalWatchStatus.Ignored))
                 {
+                    _logger.Info("File {0} skipped: already processed with status {1}", path, bufferEntry.Status);
                     return;
                 }
 
