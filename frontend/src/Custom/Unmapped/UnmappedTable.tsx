@@ -7,14 +7,16 @@ import Button from 'Components/Link/Button';
 import translate from 'Utilities/String/translate';
 import InteractiveImportModal from 'InteractiveImport/InteractiveImportModal';
 
-// Mocked UI for unmapped files since no backend API controller was provided in the spec
+import useApiQuery from 'Helpers/Hooks/useApiQuery';
+
+// UI for unmapped files connected to the real backend API
 function UnmappedTable() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<string | undefined>(undefined);
 
-  const mockFiles = [
-    { id: 1, path: '/watch/Some.Unmapped.Show.S01E01.mkv', status: 'Unmapped' }
-  ];
+  const { data: files, isLoading } = useApiQuery<any[]>({
+    path: '/localwatchbuffer'
+  });
 
   const handleManualImport = (path: string) => {
     setSelectedFolder(path);
@@ -27,14 +29,18 @@ function UnmappedTable() {
     { name: 'actions', label: 'Actions', isVisible: true }
   ];
 
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div>
       <Table columns={columns}>
         <TableBody>
-          {mockFiles.map(file => (
+          {(files || []).map((file: any) => (
             <TableRow key={file.id}>
               <TableRowCell>{file.path}</TableRowCell>
-              <TableRowCell>{file.status}</TableRowCell>
+              <TableRowCell>Unmapped</TableRowCell>
               <TableRowCell>
                 <Button onClick={() => handleManualImport(file.path)}>
                   {translate('ManualImport')}
