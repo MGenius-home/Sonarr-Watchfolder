@@ -100,6 +100,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
 
                 if (parsedEpisodeInfo == null || string.IsNullOrWhiteSpace(parsedEpisodeInfo.SeriesTitle))
                 {
+                    _logger.Info("File {0} is Unmapped: Could not parse series title from path", path);
                     bufferEntry.Status = LocalWatchStatus.Unmapped;
                     _repository.Update(bufferEntry);
                     return;
@@ -109,6 +110,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
 
                 if (series == null)
                 {
+                    _logger.Info("File {0} is Unmapped: Series '{1}' not found in library", path, parsedEpisodeInfo.SeriesTitle);
                     bufferEntry.Status = LocalWatchStatus.Unmapped;
                     _repository.Update(bufferEntry);
                     return;
@@ -133,17 +135,20 @@ namespace NzbDrone.Core.Custom.LocalIngestor
 
                     if (hasExisting)
                     {
+                        _logger.Info("File {0} is Ignored: Episode already has a file in the library", path);
                         bufferEntry.Status = LocalWatchStatus.Ignored;
                         _repository.Update(bufferEntry);
                         return;
                     }
 
                     _importApprovedEpisodes.Import(new List<ImportDecision> { decision }, true, null, ImportMode.Copy);
+                    _logger.Info("File {0} is Mapped: Successfully imported", path);
                     bufferEntry.Status = LocalWatchStatus.Imported;
                     _repository.Update(bufferEntry);
                 }
                 else
                 {
+                    _logger.Info("File {0} is Ignored: Import decision not approved", path);
                     bufferEntry.Status = LocalWatchStatus.Ignored;
                     _repository.Update(bufferEntry);
                 }
