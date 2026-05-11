@@ -115,6 +115,8 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                 }
 
                 var decisions = _makeImportDecision.GetImportDecisions(new List<string> { path }, series);
+                var decision = decisions.FirstOrDefault();
+
                 if (decision != null && decision.Approved)
                 {
                     _logger.Info("Importing approved file: {0}", path);
