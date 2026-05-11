@@ -1,0 +1,20 @@
+# This tells the IDE to NEVER index or watch these folders
+# This should stop the IDE from crashing due to large file counts
+
+tv/
+watch/
+config/
+_output/
+_temp/
+_tests/
+bin/
+obj/
+node_modules/
+.git/
+*.mkv
+*.mp4
+*.avi
+*.lnk
+*.db
+*.db-wal
+*.db-shm
