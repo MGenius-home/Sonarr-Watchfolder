@@ -5,9 +5,9 @@ using NzbDrone.Core.Custom.LocalIngestor;
 using NzbDrone.Core.Custom.LocalIngestor.Models;
 using Sonarr.Http;
 
-namespace Sonarr.Api.V3.Custom
+namespace Sonarr.Api.V5.Custom
 {
-    [V3ApiController]
+    [V5ApiController]
     public class LocalWatchBufferController : Controller
     {
         private readonly ILocalWatchBufferRepository _repository;
