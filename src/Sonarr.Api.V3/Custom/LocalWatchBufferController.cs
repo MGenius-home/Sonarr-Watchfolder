@@ -3,7 +3,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using NzbDrone.Core.Custom.LocalIngestor;
 using NzbDrone.Core.Custom.LocalIngestor.Models;
-using Sonarr.Http.REST.Attributes;
+using Sonarr.Http;
 
 namespace Sonarr.Api.V3.Custom
 {
