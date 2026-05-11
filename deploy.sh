@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Exit on any error
+# Exit on any error (so we don't 'compose up' if the build fails)
 set -e
 
 echo "--- 📥 Pulling latest changes from Git ---"
