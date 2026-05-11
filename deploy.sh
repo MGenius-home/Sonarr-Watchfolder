@@ -11,7 +11,7 @@ echo "--- 🛠️ Building the Sonarr-Watch Docker image ---"
 docker build -t sonarr-watch .
 
 echo "--- 🚀 Starting the containers ---"
-docker compose up -d
+docker compose -f ~/docker/docker-compose.yml up -d --remove-orphans
 
 echo "--- ✅ Deployment Complete! ---"
 echo "You can check logs with: docker compose logs -f sonarrwatch"
