@@ -53,7 +53,12 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                 return;
             }
 
-            var files = _diskProvider.GetFiles(watchFolder, true);
+            var videoExtensions = new[] { ".mkv", ".mp4", ".avi", ".ts" };
+            var files = _diskProvider.GetFiles(watchFolder, true)
+                        .Where(f => videoExtensions.Contains(Path.GetExtension(f).ToLower()))
+                        .ToList();
+
+            _logger.Info("Found {0} video files to process", files.Count);
 
             foreach (var file in files)
             {
@@ -110,10 +115,9 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                 }
 
                 var decisions = _makeImportDecision.GetImportDecisions(new List<string> { path }, series);
-                var decision = decisions.FirstOrDefault();
-
                 if (decision != null && decision.Approved)
                 {
+                    _logger.Info("Importing approved file: {0}", path);
                     var hasExisting = false;
 
                     foreach (var ep in decision.LocalEpisode.Episodes)
