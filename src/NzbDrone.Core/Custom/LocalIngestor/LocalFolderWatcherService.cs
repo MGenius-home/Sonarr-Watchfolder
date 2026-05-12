@@ -153,8 +153,9 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                 }
                 else
                 {
-                    _logger.Info("File {0} is Ignored: Import decision not approved", path);
-                    bufferEntry.Status = LocalWatchStatus.Ignored;
+                    var rejections = decision == null ? "No decision could be made" : string.Join(", ", decision.Rejections.Select(r => r.Reason));
+                    _logger.Info("File {0} is Unmapped: {1}", path, rejections);
+                    bufferEntry.Status = LocalWatchStatus.Unmapped;
                     _repository.Update(bufferEntry);
                 }
             }
