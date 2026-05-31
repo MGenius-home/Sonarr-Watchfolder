@@ -15,6 +15,10 @@ namespace Sonarr.Api.V5.Settings;
 [V5ApiController("settings/general")]
 public class GeneralSettingsController : SettingsController<GeneralSettingsResource>
 {
+    private const string PrivateValue = "********";
+
+    private readonly IConfigFileProvider _configFileProvider;
+    private readonly IConfigService _configService;
     private readonly IUserService _userService;
 
     public GeneralSettingsController(IConfigFileProvider configFileProvider,
@@ -23,6 +27,8 @@ public class GeneralSettingsController : SettingsController<GeneralSettingsResou
                                 IDiskProvider diskProvider)
         : base(configFileProvider, configService)
     {
+        _configFileProvider = configFileProvider;
+        _configService = configService;
         _userService = userService;
 
         SharedValidator.RuleFor(c => c.BindAddress)
@@ -54,7 +60,7 @@ public class GeneralSettingsController : SettingsController<GeneralSettingsResou
             .NotEmpty()
             .IsValidPath()
             .SetValidator(new FileExistsValidator(diskProvider))
-            .IsValidCertificate()
+            .IsValidCertificate(p => p == PrivateValue ? _configFileProvider.SslCertPassword : p)
             .When(c => c.EnableSsl);
 
         SharedValidator.RuleFor(c => c.SslKeyPath)
@@ -76,19 +82,12 @@ public class GeneralSettingsController : SettingsController<GeneralSettingsResou
 
     private bool IsMatchingPassword(GeneralSettingsResource resource)
     {
-        var user = _userService.FindUser();
-
-        if (user != null && user.Password == resource.Password)
+        if (resource.Password == PrivateValue)
         {
             return true;
         }
 
-        if (resource.Password == resource.PasswordConfirmation)
-        {
-            return true;
-        }
-
-        return false;
+        return resource.Password == resource.PasswordConfirmation;
     }
 
     protected override GeneralSettingsResource ToResource(IConfigFileProvider configFile, IConfigService model)
@@ -98,8 +97,12 @@ public class GeneralSettingsController : SettingsController<GeneralSettingsResou
         var user = _userService.FindUser();
 
         resource.Username = user?.Username ?? string.Empty;
-        resource.Password = user?.Password ?? string.Empty;
+        resource.Password = user?.Password.IsNotNullOrWhiteSpace() == true ? PrivateValue : string.Empty;
         resource.PasswordConfirmation = string.Empty;
+
+        // Prevent secrets from being exposed
+        resource.SslCertPassword = resource.SslCertPassword.IsNullOrWhiteSpace() ? string.Empty : PrivateValue;
+        resource.ProxyPassword = resource.ProxyPassword.IsNullOrWhiteSpace() ? string.Empty : PrivateValue;
 
         return resource;
     }
@@ -108,7 +111,17 @@ public class GeneralSettingsController : SettingsController<GeneralSettingsResou
     {
         if (resource.Username.IsNotNullOrWhiteSpace() && resource.Password.IsNotNullOrWhiteSpace())
         {
-            _userService.Upsert(resource.Username, resource.Password);
+            _userService.Upsert(resource.Username, resource.Password == PrivateValue ? null : resource.Password);
+        }
+
+        if (resource.SslCertPassword == PrivateValue)
+        {
+            resource.SslCertPassword = _configFileProvider.SslCertPassword;
+        }
+
+        if (resource.ProxyPassword == PrivateValue)
+        {
+            resource.ProxyPassword = _configService.ProxyPassword;
         }
 
         return base.SaveSettings(resource);
