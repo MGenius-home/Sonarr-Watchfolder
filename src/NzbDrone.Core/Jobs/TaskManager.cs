@@ -19,6 +19,7 @@ using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Tv.Commands;
 using NzbDrone.Core.Update.Commands;
 using NzbDrone.Core.Custom.LocalIngestor;
+using NzbDrone.Core.Custom.RemoteSync;
 
 namespace NzbDrone.Core.Jobs
 {
@@ -138,6 +139,12 @@ namespace NzbDrone.Core.Jobs
                     {
                         Interval = GetLocalWatchInterval(),
                         TypeName = typeof(LocalWatchScanCommand).FullName
+                    },
+
+                    new ScheduledTask
+                    {
+                        Interval = GetRemoteSyncInterval(),
+                        TypeName = typeof(RemoteSeriesSyncCommand).FullName
                     }
                 };
 
@@ -216,6 +223,18 @@ namespace NzbDrone.Core.Jobs
             }
 
             return 5;
+        }
+
+        private int GetRemoteSyncInterval()
+        {
+            var envInterval = Environment.GetEnvironmentVariable("SONARR_SYNC_INTERVAL_MINUTES");
+
+            if (int.TryParse(envInterval, out var interval) && interval > 0)
+            {
+                return interval;
+            }
+
+            return 360;
         }
 
         public void Handle(CommandExecutedEvent message)

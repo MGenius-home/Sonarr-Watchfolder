@@ -177,6 +177,8 @@ namespace NzbDrone.Core.Datastore
             Mapper.Entity<AutoTagging.AutoTag>("AutoTagging").RegisterModel();
 
             Mapper.Entity<LocalWatchBuffer>("LocalWatchBuffer").RegisterModel();
+
+            Mapper.Entity<NzbDrone.Core.Custom.RemoteSync.Models.RemoteSyncHistory>("RemoteSyncHistory").RegisterModel();
         }
 
         private static void RegisterMappers()

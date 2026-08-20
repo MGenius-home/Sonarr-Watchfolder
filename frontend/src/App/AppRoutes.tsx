@@ -4,6 +4,7 @@ import Blocklist from 'Activity/Blocklist/Blocklist';
 import History from 'Activity/History/History';
 import Queue from 'Activity/Queue/Queue';
 import UnmappedLayout from 'Custom/Unmapped/UnmappedLayout';
+import RemoteSyncLayout from 'Custom/RemoteSync/RemoteSyncLayout';
 import AddNewSeries from 'AddSeries/AddNewSeries/AddNewSeries';
 import ImportSeriesPage from 'AddSeries/ImportSeries/ImportSeriesPage';
 import CalendarPage from 'Calendar/CalendarPage';
@@ -86,6 +87,8 @@ function AppRoutes() {
       <Route path="/activity/blocklist" component={Blocklist} />
 
       <Route path="/activity/unmapped" component={UnmappedLayout} />
+
+      <Route path="/activity/remotesync" component={RemoteSyncLayout} />
 
       {/*
         Wanted

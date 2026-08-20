@@ -93,6 +93,10 @@ const LINKS: SidebarItem[] = [
         title: () => translate('Unmapped'),
         to: '/activity/unmapped',
       },
+      {
+        title: () => translate('Remote Sync'),
+        to: '/activity/remotesync',
+      },
     ],
   },
 
