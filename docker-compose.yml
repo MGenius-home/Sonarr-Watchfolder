@@ -1,17 +1,27 @@
-version: "3"
+# Example compose for running Sonarr-Watchfolder.
+#
+# /config — app data (database, settings)
+# /tv     — your media library
+# /watch  — local folder to ingest files from (never modified)
 services:
-  sonarr:
-    build: .
-    container_name: sonarr
+  sonarrwatch:
+    image: ghcr.io/mgenius-home/sonarr-watchfolder:latest
+    container_name: sonarrwatch
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
-      - SONARR_WATCH_INTERVAL=5
+      # Watch folder scan interval in minutes
+      - SONARR_WATCH_INTERVAL=30
+      # Optional: periodically import newly-added series from an existing Sonarr instance
+      # - SONARR_SOURCE_URL=http://sonarr:8989
+      # - SONARR_SOURCE_API_KEY=your-api-key
+      # - SONARR_WATCH_ROOT_FOLDER=/tv
+      # - SONARR_SYNC_INTERVAL_MINUTES=360
     volumes:
       - ./config:/config
-      - ./tv:/tv
-      - ./watch:/watch
+      - /path/to/library:/tv
+      - /path/to/watchfolder:/watch
     ports:
-      - 8990:8989
+      - 8989:8989
     restart: unless-stopped

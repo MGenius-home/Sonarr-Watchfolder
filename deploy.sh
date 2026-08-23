@@ -1,17 +1,19 @@
 #!/bin/bash
 
-# Exit on any error (so we don't 'compose up' if the build fails)
+# Pull-based deploy: fetch the latest code and prebuilt image, recreate the container.
+# No local build needed — GitHub Actions builds and publishes the image to GHCR.
 set -e
 
-echo "--- 📥 Pulling latest changes from Git ---"
+cd "$(dirname "$0")"
+
+echo "--- Pulling latest code ---"
 git pull
 
-echo "--- 🛠️ Building the Sonarr-Watch Docker image ---"
-# We use --no-cache for now to ensure all code changes and sqlite3 are definitely included
-docker build -t sonarr-watch .
+echo "--- Pulling latest image from GHCR ---"
+docker compose -f ~/docker/docker-compose.yml pull sonarrwatch
 
-echo "--- 🚀 Starting the containers ---"
-docker compose -f ~/docker/docker-compose.yml up -d --remove-orphans
+echo "--- Recreating containers ---"
+docker compose -f ~/docker/docker-compose.yml up -d --remove-orphans sonarrwatch
 
-echo "--- ✅ Deployment Complete! ---"
-echo "You can check logs with: docker compose logs -f sonarrwatch"
+echo "--- Deployment complete ---"
+echo "Logs: docker compose -f ~/docker/docker-compose.yml logs -f sonarrwatch"
