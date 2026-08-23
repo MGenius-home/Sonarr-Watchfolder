@@ -181,7 +181,18 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                 return null;
             }
 
-            var series = _parsingService.GetSeries(parsedEpisodeInfo.SeriesTitle);
+            Series series;
+
+            try
+            {
+                series = _parsingService.GetSeries(parsedEpisodeInfo.SeriesTitle);
+            }
+            catch (NzbDrone.Core.Tv.MultipleSeriesFoundException)
+            {
+                // Ambiguous title (e.g. an original and a remake sharing a name): needs manual review
+                SetStatus(entry, LocalWatchStatus.Unmapped, path, string.Format("Multiple library series match '{0}'", parsedEpisodeInfo.SeriesTitle));
+                return null;
+            }
 
             if (series == null)
             {
