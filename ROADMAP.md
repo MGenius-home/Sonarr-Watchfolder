@@ -85,6 +85,55 @@ Tasks:
 Policy: apply bug + **security** fixes. Skip anything that exists to fetch media from
 the internet (download clients, indexers, release searching) — this fork never uses them.
 
+**Merge-base:** bf5d48c76 (= upstream Sonarr v5-develop fork point). Upstream delta:
+195 commits (bf5d48c76..Sonarr/Sonarr@v5-develop, audited 2026-08-23).
+Remote: `upstream` → https://github.com/Sonarr/Sonarr.git
+
+### Triage result (2026-08-23)
+
+**Batch A — Security / runtime deps (apply first)**
+- [ ] `30661f86b` .NET 10.0.11 runtime patches (supersedes 10.0.8/9/10 bumps)
+- [ ] `a8d50c164` sqlite3 3.53.4
+- [ ] `fe09a6889` FFprobe 9.0.1 (supersedes 9.0 / 8.1.x)
+- [ ] `5215d7384` + `fa1e696f4` npm audit bumps (qs, lodash, postcss, babel…)
+
+**Batch B — Parsing / MediaInfo (directly improves ingest matching)**
+- [ ] `ae5b03bcf` date parsed before 4-digit absolute ep number
+- [ ] `974d5377c` anime season pack parsing
+- [ ] `dfc37be76` quality parsing from some WEB releases
+- [ ] `a533a1a46`, `5ef066352` release-group false positives (N-Z-B, Celdra)
+- [ ] `547cd5b48`, `07af80c50` H.266/VVC support
+- [ ] `61a73d04f` DTS-HD MA + DTS:X → DTS-X
+- [ ] `5821e40d4`, `208838d0f`, `ad661cc76`, `edba5ce84` media info fixes
+
+**Batch C — Library/import fixes (applicable to local-only use)**
+- [ ] `143a007ce` ignore invalid languages in Manual Import (feeds Unmapped workflow)
+- [ ] `64105f98a` multiple extra files with same extension
+- [ ] `95c42a92b` slow monitoring changes on large shows
+- [ ] `890348abe` Manage Episodes media file listing
+- [ ] `a1abe179a` custom score vs renamed filename pre-import
+- [ ] `fde8bb0ec` + `bcab4b0da` Jellyfin 12+ notifications (host runs Jellyfin-family apps)
+- [ ] `8ed9a3c53` stop error-logging missing translation files (log-noise)
+- [ ] `e95b4d8e5` cleanup post-backup temp files
+- [ ] `fdb9e3f9f` dispose logging targets
+
+**Batch D — Low-risk hardening (optional)**
+- [ ] `cca615b8e` non-ASCII HTTP Basic Auth credentials
+- [ ] `aea7ea743` send full certificate chain
+- [ ] `9cba4a29a` miniprofiler off when disabled
+- [ ] `da2284d7e` cache series path free-space spec
+- [ ] `036aeadd3` lazy JSON deserialization
+- [ ] `9c69d3ec2` Happy Eyeballs DNS shortcut
+
+**Skipped on purpose:** everything touching download clients, blocklist, RSS/interactive
+search, grab/failed-history, import lists (Trakt/Simkl), delay profiles, notification
+features (Ntfy/Pushover), stats page, calendar picker, custom filters — plus the giant
+frontend rewrites (Redux removal, react-query conversions, React Router v7) which are
+high-conflict/no-value for this fork. Weblate translation commits skipped (churn).
+
+Risks noted: skipping frontend rewrites widens drift from upstream; acceptable for a
+personal fork, revisit if ever contributing back.
+
 - [ ] Determine merge-base against upstream (`Servarr/Sonarr`, branch matching our base)
       and record it in this file
 - [ ] Generate upstream changelog since base; classify commits: security / bug /
