@@ -80,7 +80,7 @@ Tasks:
 - [x] Batch decisions grouped by series (one decision request per series per scan)
 - [x] Unit tests: extension filter, settling, growth, min-size, import-mode parsing
 
-## Phase 4 — Upstream sync (security first)
+## Phase 4 — Upstream sync ✅ COMPLETE 2026-08-23 (41 upstream commits applied across A–D)
 
 Policy: apply bug + **security** fixes. Skip anything that exists to fetch media from
 the internet (download clients, indexers, release searching) — this fork never uses them.
@@ -118,13 +118,13 @@ Remote: `upstream` → https://github.com/Sonarr/Sonarr.git
 - [x] `e95b4d8e5` cleanup post-backup temp files
 - [x] `fdb9e3f9f` dispose logging targets
 
-**Batch D — Low-risk hardening (optional)**
-- [ ] `cca615b8e` non-ASCII HTTP Basic Auth credentials
-- [ ] `aea7ea743` send full certificate chain
-- [ ] `9cba4a29a` miniprofiler off when disabled
-- [ ] `da2284d7e` cache series path free-space spec
-- [ ] `036aeadd3` lazy JSON deserialization
-- [ ] `9c69d3ec2` Happy Eyeballs DNS shortcut
+**Batch D — Low-risk hardening ✅ DONE 2026-08-23**
+- [x] `cca615b8e` non-ASCII HTTP Basic Auth credentials
+- [x] `aea7ea743` send full certificate chain
+- [x] `9cba4a29a` miniprofiler off when disabled
+- [x] `da2284d7e` cache series path free-space spec
+- [x] `036aeadd3` lazy JSON deserialization
+- [x] `9c69d3ec2` Happy Eyeballs DNS shortcut
 
 **Skipped on purpose:** everything touching download clients, blocklist, RSS/interactive
 search, grab/failed-history, import lists (Trakt/Simkl), delay profiles, notification
