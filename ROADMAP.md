@@ -107,16 +107,16 @@ Remote: `upstream` → https://github.com/Sonarr/Sonarr.git
 - [x] `61a73d04f` DTS-HD MA + DTS:X → DTS-X
 - [x] `5821e40d4`, `208838d0f`, `ad661cc76`, `edba5ce84` media info fixes
 
-**Batch C — Library/import fixes (applicable to local-only use)**
-- [ ] `143a007ce` ignore invalid languages in Manual Import (feeds Unmapped workflow)
-- [ ] `64105f98a` multiple extra files with same extension
-- [ ] `95c42a92b` slow monitoring changes on large shows
-- [ ] `890348abe` Manage Episodes media file listing
-- [ ] `a1abe179a` custom score vs renamed filename pre-import
-- [ ] `fde8bb0ec` + `bcab4b0da` Jellyfin 12+ notifications (host runs Jellyfin-family apps)
-- [ ] `8ed9a3c53` stop error-logging missing translation files (log-noise)
-- [ ] `e95b4d8e5` cleanup post-backup temp files
-- [ ] `fdb9e3f9f` dispose logging targets
+**Batch C — Library/import fixes ✅ DONE 2026-08-23** (10 commits, one conflict resolved in EpisodeRepository; full suite: 5121 tests green)
+- [x] `143a007ce` ignore invalid languages in Manual Import (feeds Unmapped workflow)
+- [x] `64105f98a` multiple extra files with same extension
+- [x] `95c42a92b` slow monitoring changes on large shows
+- [x] `890348abe` Manage Episodes media file listing
+- [x] `a1abe179a` custom score vs renamed filename pre-import
+- [x] `fde8bb0ec` + `bcab4b0da` Jellyfin 12+ notifications (host runs Jellyfin-family apps)
+- [x] `8ed9a3c53` stop error-logging missing translation files (log-noise)
+- [x] `e95b4d8e5` cleanup post-backup temp files
+- [x] `fdb9e3f9f` dispose logging targets
 
 **Batch D — Low-risk hardening (optional)**
 - [ ] `cca615b8e` non-ASCII HTTP Basic Auth credentials
