@@ -45,6 +45,12 @@ Root causes identified:
 
 ## Phase 3 — Rework the ingest ("move file") implementation
 
+**Status: implemented 2026-08-23, pending server verification.**
+New config: `SONARR_WATCH_FOLDER`, `SONARR_IMPORT_MODE`, `SONARR_WATCH_MIN_SIZE_MB`,
+`SONARR_WATCH_SETTLE_SECONDS`, `SONARR_WATCH_FAILURE_THRESHOLD`. Migration 237 adds
+`Size` + `Failures` to LocalWatchBuffer; `Failed` status added. Unit tests:
+`WatchFolderRulesFixture` (27 cases).
+
 Current known problems in `LocalFolderWatcherService.cs`:
 
 | # | Problem | Where |
@@ -63,18 +69,15 @@ Current known problems in `LocalFolderWatcherService.cs`:
 
 Tasks:
 
-- [ ] Make watch path configurable (`SONARR_WATCH_FOLDER`, default `/watch`)
-- [ ] Route all FS access through `IDiskProvider`
-- [ ] Strengthen settling: require unchanged size across two scans OR mtime-age threshold,
-      whichever is safer; skip files still open by another process where detectable
-- [ ] Ignore files < 50 MB (configurable) unless already tracked
-- [ ] Prune buffer rows whose paths no longer exist on disk
-- [ ] Add failure backoff: after N consecutive failures mark `Failed` and stop retrying;
-      log once, count thereafter
-- [ ] Configurable import mode (keep `Copy` as the safe default)
-- [ ] Batch decisions grouped by parsed series to cut redundant lookups
-- [ ] Unit tests: settle logic, extension filter, decision routing (Import/No-Upgrade/
-      Ignored/Unmapped), buffer pruning. Run via `dotnet test` on the Core test project.
+- [x] Make watch path configurable (`SONARR_WATCH_FOLDER`, default `/watch`)
+- [x] Route FS access through `IDiskProvider` (mtime via `FileGetLastWrite`, size via `GetFileSize`, lock check via `IsFileLocked`)
+- [x] Strengthen settling: unchanged size across scans + mtime-age threshold + file-lock detection
+- [x] Ignore files below minimum size (default 50 MB, configurable) before they enter the buffer table
+- [x] Prune buffer rows whose paths no longer exist on disk
+- [x] Failure backoff: escalating log levels, hard stop after N failures (`Failed` status)
+- [x] Configurable import mode (keep `Copy` as the safe default)
+- [x] Batch decisions grouped by series (one decision request per series per scan)
+- [x] Unit tests: extension filter, settling, growth, min-size, import-mode parsing
 
 ## Phase 4 — Upstream sync (security first)
 

@@ -8,5 +8,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor.Models
         public string Path { get; set; }
         public LocalWatchStatus Status { get; set; }
         public DateTime LastSeen { get; set; }
+        public long? Size { get; set; }
+        public int Failures { get; set; }
     }
 }

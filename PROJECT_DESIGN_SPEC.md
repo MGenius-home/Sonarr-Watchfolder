@@ -46,6 +46,28 @@ This document outlines the architecture and implementation details for the custo
 - **ORM Mapping**: Resolved `KeyNotFoundException` by correctly registering the `LocalWatchBuffer` model in `TableMapping.cs`.
 - **Runtime Dependencies**: Fixed `Sonarr.Mono.dll` missing error by adding unconditional project references.
 
+### Configuration (environment variables)
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `SONARR_WATCH_FOLDER` | `/watch` | Folder scanned for new video files |
+| `SONARR_WATCH_INTERVAL` | `5` | Minutes between scans |
+| `SONARR_IMPORT_MODE` | `Copy` | `Copy` or `Move` into the library (`Move` removes the source file) |
+| `SONARR_WATCH_MIN_SIZE_MB` | `50` | Files below this size are never tracked |
+| `SONARR_WATCH_SETTLE_SECONDS` | `60` | Minimum age since last write before a file is processed |
+| `SONARR_WATCH_FAILURE_THRESHOLD` | `5` | Consecutive failures before a file is marked `Failed` and skipped |
+| `SONARR_SOURCE_URL` / `SONARR_SOURCE_API_KEY` | – | Upstream Sonarr to pull newly-added series from |
+| `SONARR_SYNC_INTERVAL_MINUTES` | `360` | Remote series sync interval |
+| `SONARR_WATCH_ROOT_FOLDER` | `/tv` | Root folder used when adding synced series |
+
+### Ingest behaviour
+- **Settling**: a file is only imported when its size is unchanged since the previous
+  scan AND it has not been written to for the settle period. Locked files are skipped.
+- **Failure backoff**: repeated processing failures escalate from Warn to Debug and,
+  after the threshold, mark the entry `Failed` so it stops retrying.
+- **Pruning**: buffer rows whose source file has disappeared are deleted each scan.
+- **Non-destructive default**: Copy mode keeps `/watch` untouched.
+
 ---
 
 ## Operational Commands (On Server)
