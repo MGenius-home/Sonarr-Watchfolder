@@ -43,12 +43,13 @@ Root causes identified:
 - [x] Add history table pruning (e.g. delete rows older than 30 days) during the sync run.
 - [ ] Optional: surface counts in the RemoteSync UI header instead of raw row spam.
 
-## Phase 3 — Rework the ingest ("move file") implementation
+## Phase 3 — Rework the ingest ("move file") implementation ✅ DONE 2026-08-23
 
-**Status: implemented 2026-08-23, pending server verification.**
+**Status: implemented and verified live.** Migration 237 applied; first scan pruned 290
+stale rows; ambiguous titles (Shogun 1980 vs Shōgun 2024) now route to Unmapped with a
+single Info line instead of per-scan error traces.
 New config: `SONARR_WATCH_FOLDER`, `SONARR_IMPORT_MODE`, `SONARR_WATCH_MIN_SIZE_MB`,
-`SONARR_WATCH_SETTLE_SECONDS`, `SONARR_WATCH_FAILURE_THRESHOLD`. Migration 237 adds
-`Size` + `Failures` to LocalWatchBuffer; `Failed` status added. Unit tests:
+`SONARR_WATCH_SETTLE_SECONDS`, `SONARR_WATCH_FAILURE_THRESHOLD`. Unit tests:
 `WatchFolderRulesFixture` (27 cases).
 
 Current known problems in `LocalFolderWatcherService.cs`:
