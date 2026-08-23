@@ -23,9 +23,11 @@ Goal: server never builds. It pulls from GHCR.
 - [x] First run: image published, anonymous pull verified, server switched over,
       container healthy and UI responding
 
-## Phase 2 — Stop the daily log/history spam
+## Phase 2 — Stop the daily log/history spam ✅ DONE 2026-08-23
 
 **Verified on server (2026-08-23):** `RemoteSyncHistory` = 28 Skipped vs 2 Added rows.
+**Verified after fix:** full scan of 340 files produced 3 log lines; existing Skipped
+rows purged; history now records only state changes and prunes rows older than 30 days.
 
 Root causes identified:
 
@@ -34,11 +36,11 @@ Root causes identified:
 - `LocalFolderWatcherService.cs:89,108,118,157` re-logs Unmapped/Ignored files on every
   scan (default every 5 min).
 
-- [ ] RemoteSync: stop recording "Skipped" history rows entirely; keep rows only for
+- [x] RemoteSync: stop recording "Skipped" history rows entirely; keep rows only for
       state changes (Added / Failed). Log one summary line: `skipped=N`.
-- [ ] Watcher: only log Unmapped/Ignored decisions once per file (log at Debug on
+- [x] Watcher: only log Unmapped/Ignored decisions once per file (log at Debug on
       subsequent scans, Info on first decision or status change).
-- [ ] Add history table pruning (e.g. delete rows older than 30 days) during the sync run.
+- [x] Add history table pruning (e.g. delete rows older than 30 days) during the sync run.
 - [ ] Optional: surface counts in the RemoteSync UI header instead of raw row spam.
 
 ## Phase 3 — Rework the ingest ("move file") implementation
