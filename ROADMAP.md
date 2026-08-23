@@ -98,14 +98,14 @@ Remote: `upstream` → https://github.com/Sonarr/Sonarr.git
 - [x] npm audit bumps applied selectively: qs, lodash, postcss, babel, core-js, fontawesome, @types/*; KEPT react-router 5 + babel-loader 9 + react-redux stack (upstream's file assumed the Redux-removal rewrite we skip); yarn.lock regenerated in clean container
 - [x] Deployed + verified: UI 302, DB v237, zero startup errors
 
-**Batch B — Parsing / MediaInfo (directly improves ingest matching)**
-- [ ] `ae5b03bcf` date parsed before 4-digit absolute ep number
-- [ ] `974d5377c` anime season pack parsing
-- [ ] `dfc37be76` quality parsing from some WEB releases
-- [ ] `a533a1a46`, `5ef066352` release-group false positives (N-Z-B, Celdra)
-- [ ] `547cd5b48`, `07af80c50` H.266/VVC support
-- [ ] `61a73d04f` DTS-HD MA + DTS:X → DTS-X
-- [ ] `5821e40d4`, `208838d0f`, `ad661cc76`, `edba5ce84` media info fixes
+**Batch B — Parsing / MediaInfo ✅ DONE 2026-08-23** (12 commits, zero conflicts; Dapper aligned to 2.1.79 in test project; 1955 parser tests green)
+- [x] `ae5b03bcf` date parsed before 4-digit absolute ep number
+- [x] `974d5377c` anime season pack parsing
+- [x] `dfc37be76` quality parsing from some WEB releases
+- [x] `a533a1a46`, `5ef066352` release-group false positives (N-Z-B, Celdra)
+- [x] `547cd5b48`, `07af80c50` H.266/VVC support
+- [x] `61a73d04f` DTS-HD MA + DTS:X → DTS-X
+- [x] `5821e40d4`, `208838d0f`, `ad661cc76`, `edba5ce84` media info fixes
 
 **Batch C — Library/import fixes (applicable to local-only use)**
 - [ ] `143a007ce` ignore invalid languages in Manual Import (feeds Unmapped workflow)
