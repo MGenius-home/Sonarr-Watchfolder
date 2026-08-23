@@ -92,10 +92,11 @@ Remote: `upstream` → https://github.com/Sonarr/Sonarr.git
 ### Triage result (2026-08-23)
 
 **Batch A — Security / runtime deps (apply first)**
-- [ ] `30661f86b` .NET 10.0.11 runtime patches (supersedes 10.0.8/9/10 bumps)
-- [ ] `a8d50c164` sqlite3 3.53.4
-- [ ] `fe09a6889` FFprobe 9.0.1 (supersedes 9.0 / 8.1.x)
-- [ ] `5215d7384` + `fa1e696f4` npm audit bumps (qs, lodash, postcss, babel…)
+- [x] `30661f86b` .NET 10.0.11 runtime patches (supersedes 10.0.8/9/10 bumps)
+- [x] `a8d50c164` sqlite3 3.53.4 (folded into .NET bump pick)
+- [x] `fe09a6889` FFprobe 9.0.1 (supersedes 9.0 / 8.1.x)
+- [x] npm audit bumps applied selectively: qs, lodash, postcss, babel, core-js, fontawesome, @types/*; KEPT react-router 5 + babel-loader 9 + react-redux stack (upstream's file assumed the Redux-removal rewrite we skip); yarn.lock regenerated in clean container
+- [x] Deployed + verified: UI 302, DB v237, zero startup errors
 
 **Batch B — Parsing / MediaInfo (directly improves ingest matching)**
 - [ ] `ae5b03bcf` date parsed before 4-digit absolute ep number
