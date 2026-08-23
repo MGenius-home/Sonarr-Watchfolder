@@ -12,6 +12,7 @@ namespace NzbDrone.Core.Custom.RemoteSync
     public class RemoteSeriesSyncService : IExecute<RemoteSeriesSyncCommand>
     {
         private const int LookbackDays = 7;
+        private const int HistoryRetentionDays = 30;
 
         private readonly IRemoteSonarrClient _remoteClient;
         private readonly ISeriesService _seriesService;
@@ -66,8 +67,10 @@ namespace NzbDrone.Core.Custom.RemoteSync
                     var existing = _seriesService.FindByTvdbId(remote.TvdbId);
                     if (existing != null)
                     {
+                        // Already present: count only. Recording a row per run flooded
+                        // both the log and the RemoteSyncHistory table.
                         skipped++;
-                        RecordHistory(remote.TvdbId, remote.Title, "Skipped", "Already present locally");
+                        _logger.Debug("Remote series sync: skipping '{0}' (tvdbId={1}), already present", remote.Title, remote.TvdbId);
                         continue;
                     }
 
@@ -107,6 +110,15 @@ namespace NzbDrone.Core.Custom.RemoteSync
             }
 
             _logger.Info("Remote series sync completed: added={0}, skipped={1}, failed={2}", added, skipped, failed);
+
+            try
+            {
+                _historyRepository.DeleteOlderThan(DateTime.UtcNow.AddDays(HistoryRetentionDays));
+            }
+            catch (Exception ex)
+            {
+                _logger.Warn(ex, "Remote series sync: failed to prune history older than {0} days", HistoryRetentionDays);
+            }
         }
 
         private void RecordHistory(int tvdbId, string title, string action, string detail)

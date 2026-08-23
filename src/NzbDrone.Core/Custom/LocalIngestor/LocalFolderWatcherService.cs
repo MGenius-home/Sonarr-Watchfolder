@@ -86,10 +86,9 @@ namespace NzbDrone.Core.Custom.LocalIngestor
 
                 if (bufferEntry != null && (bufferEntry.Status == LocalWatchStatus.Imported || bufferEntry.Status == LocalWatchStatus.Ignored))
                 {
-                    _logger.Info("File {0} skipped: already processed with status {1}", path, bufferEntry.Status);
+                    _logger.Debug("File {0} skipped: already processed with status {1}", path, bufferEntry.Status);
                     return;
                 }
-
                 if (bufferEntry == null)
                 {
                     bufferEntry = new LocalWatchBuffer
@@ -105,9 +104,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
 
                 if (parsedEpisodeInfo == null || string.IsNullOrWhiteSpace(parsedEpisodeInfo.SeriesTitle))
                 {
-                    _logger.Info("File {0} is Unmapped: Could not parse series title from path", path);
-                    bufferEntry.Status = LocalWatchStatus.Unmapped;
-                    _repository.Update(bufferEntry);
+                    SetStatus(bufferEntry, LocalWatchStatus.Unmapped, path, "Could not parse series title from path");
                     return;
                 }
 
@@ -115,9 +112,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
 
                 if (series == null)
                 {
-                    _logger.Info("File {0} is Unmapped: Series '{1}' not found in library", path, parsedEpisodeInfo.SeriesTitle);
-                    bufferEntry.Status = LocalWatchStatus.Unmapped;
-                    _repository.Update(bufferEntry);
+                    SetStatus(bufferEntry, LocalWatchStatus.Unmapped, path, string.Format("Series '{0}' not found in library", parsedEpisodeInfo.SeriesTitle));
                     return;
                 }
 
@@ -126,7 +121,6 @@ namespace NzbDrone.Core.Custom.LocalIngestor
 
                 if (decision != null && decision.Approved)
                 {
-                    _logger.Info("Importing approved file: {0}", path);
                     var hasExisting = false;
 
                     foreach (var ep in decision.LocalEpisode.Episodes)
@@ -140,28 +134,40 @@ namespace NzbDrone.Core.Custom.LocalIngestor
 
                     if (hasExisting)
                     {
-                        _logger.Info("File {0} is Ignored: Episode already has a file in the library", path);
-                        bufferEntry.Status = LocalWatchStatus.Ignored;
-                        _repository.Update(bufferEntry);
+                        SetStatus(bufferEntry, LocalWatchStatus.Ignored, path, "Episode already has a file in the library");
                         return;
                     }
 
+                    _logger.Info("Importing approved file: {0}", path);
                     _importApprovedEpisodes.Import(new List<ImportDecision> { decision }, true, null, ImportMode.Copy);
-                    _logger.Info("File {0} is Mapped: Successfully imported", path);
-                    bufferEntry.Status = LocalWatchStatus.Imported;
-                    _repository.Update(bufferEntry);
+                    SetStatus(bufferEntry, LocalWatchStatus.Imported, path, "Successfully imported");
                 }
                 else
                 {
                     var rejections = decision == null ? "No decision could be made" : string.Join(", ", decision.Rejections.Select(r => r.Reason));
-                    _logger.Info("File {0} is Unmapped: {1}", path, rejections);
-                    bufferEntry.Status = LocalWatchStatus.Unmapped;
-                    _repository.Update(bufferEntry);
+                    SetStatus(bufferEntry, LocalWatchStatus.Unmapped, path, rejections);
                 }
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error processing local watch file: {0}", path);
+            }
+        }
+
+        private void SetStatus(LocalWatchBuffer entry, LocalWatchStatus newStatus, string path, string reason)
+        {
+            var changed = entry.Status != newStatus;
+            entry.Status = newStatus;
+            _repository.Update(entry);
+
+            if (changed)
+            {
+                _logger.Info("File {0}: {1} -> {2}", path, reason, newStatus);
+            }
+            else
+            {
+                // Same decision as previous scans: log quietly to avoid flooding the log
+                _logger.Debug("File {0} remains {1}: {2}", path, newStatus, reason);
             }
         }
     }
