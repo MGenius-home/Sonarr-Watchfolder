@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using NzbDrone.Common.Disk;
@@ -97,7 +98,7 @@ namespace NzbDrone.Core.Authentication
             if (user.Salt.IsNullOrWhiteSpace())
             {
                 // If password matches stored SHA256 hash, update to salted hash and verify.
-                if (user.Password == password.SHA256Hash())
+                if (IsMatchingHash(user.Password, password.SHA256Hash()))
                 {
                     SetUserHashedPassword(user, password);
 
@@ -154,7 +155,12 @@ namespace NzbDrone.Core.Authentication
             var salt = Convert.FromBase64String(user.Salt);
             var hashedPassword = GetHashedPassword(password, salt, user.Iterations);
 
-            return user.Password == hashedPassword;
+            return IsMatchingHash(user.Password, hashedPassword);
+        }
+
+        private static bool IsMatchingHash(string storedHash, string hash)
+        {
+            return CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(storedHash), Encoding.UTF8.GetBytes(hash));
         }
 
         public void Handle(ApplicationStartedEvent message)
