@@ -12,6 +12,7 @@ using NzbDrone.Core.Download;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.EpisodeImport;
 using NzbDrone.Core.MediaFiles.Events;
+using NzbDrone.Core.MediaFiles.MediaInfo;
 using NzbDrone.Core.Parser;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Test.Framework;
@@ -34,6 +35,7 @@ namespace NzbDrone.Core.Test.Custom.LocalIngestor
             Environment.SetEnvironmentVariable("SONARR_WATCH_MIN_SIZE_MB", "1");
             Environment.SetEnvironmentVariable("SONARR_WATCH_SETTLE_SECONDS", "60");
             Environment.SetEnvironmentVariable("SONARR_WATCH_FAILURE_THRESHOLD", "3");
+            Environment.SetEnvironmentVariable("SONARR_WATCH_ALLOW_UPGRADES", null);
 
             _series = Builder<Series>.CreateNew()
                 .With(s => s.Id = 10)
@@ -57,6 +59,7 @@ namespace NzbDrone.Core.Test.Custom.LocalIngestor
             Environment.SetEnvironmentVariable("SONARR_WATCH_MIN_SIZE_MB", null);
             Environment.SetEnvironmentVariable("SONARR_WATCH_SETTLE_SECONDS", null);
             Environment.SetEnvironmentVariable("SONARR_WATCH_FAILURE_THRESHOLD", null);
+            Environment.SetEnvironmentVariable("SONARR_WATCH_ALLOW_UPGRADES", null);
         }
 
         private string WatchFile(string relativePath) => Path.Combine(_watchFolder, relativePath);
@@ -452,6 +455,166 @@ namespace NzbDrone.Core.Test.Custom.LocalIngestor
                     b.Status == LocalWatchStatus.Failed &&
                     b.Failures == 3 &&
                     b.Reason == "MediaInfo crash")),
+                Times.Once());
+        }
+
+        [Test]
+        public void should_requeue_imported_file_when_allow_upgrades_and_size_changed()
+        {
+            Environment.SetEnvironmentVariable("SONARR_WATCH_ALLOW_UPGRADES", "true");
+            var path = WatchFile("Test.Show.S01E01.mkv");
+            SetupSettledFile(path, sizeBytes: 250L * 1024 * 1024);
+
+            var existing = new LocalWatchBuffer
+            {
+                Id = 9,
+                Path = path,
+                Status = LocalWatchStatus.Imported,
+                Size = 100L * 1024 * 1024,
+                LastSeen = DateTime.UtcNow.AddHours(-2)
+            };
+
+            Mocker.GetMock<ILocalWatchBufferRepository>()
+                .Setup(r => r.All())
+                .Returns(new List<LocalWatchBuffer> { existing });
+
+            Subject.Execute(new LocalWatchScanCommand());
+
+            Mocker.GetMock<ILocalWatchBufferRepository>().Verify(
+                r => r.Update(It.Is<LocalWatchBuffer>(b =>
+                    b.Id == 9 &&
+                    b.Status == LocalWatchStatus.Pending &&
+                    b.Size == 250L * 1024 * 1024)),
+                Times.Once());
+            Mocker.GetMock<IMakeImportDecision>().Verify(
+                m => m.GetImportDecisions(It.IsAny<List<string>>(), It.IsAny<Series>()),
+                Times.Never());
+        }
+
+        [Test]
+        public void should_upgrade_existing_2_0_episode_when_candidate_is_5_1_even_if_not_quality_upgrade()
+        {
+            Environment.SetEnvironmentVariable("SONARR_WATCH_ALLOW_UPGRADES", "true");
+            var path = WatchFile("Test.Show.S01E01.mkv");
+            SetupSettledFile(path);
+
+            Mocker.GetMock<IParsingService>()
+                .Setup(p => p.Map(It.IsAny<ParsedEpisodeInfo>(), 0, 0, null))
+                .Returns(new RemoteEpisode { Series = _series });
+
+            var existingEpisodeFile = new EpisodeFile
+            {
+                Id = 55,
+                MediaInfo = new MediaInfoModel
+                {
+                    Width = 1920,
+                    Height = 1080,
+                    AudioStreams = new List<MediaInfoAudioStreamModel> { new MediaInfoAudioStreamModel { Channels = 2 } }
+                }
+            };
+
+            Mocker.GetMock<IMediaFileService>()
+                .Setup(m => m.Get(55))
+                .Returns(existingEpisodeFile);
+
+            var episode = Builder<Episode>.CreateNew()
+                .With(e => e.Id = 100)
+                .With(e => e.EpisodeFileId = 55)
+                .Build();
+
+            var localEpisode = new LocalEpisode
+            {
+                Path = path,
+                Series = _series,
+                Episodes = new List<Episode> { episode },
+                MediaInfo = new MediaInfoModel
+                {
+                    Width = 1920,
+                    Height = 1080,
+                    AudioStreams = new List<MediaInfoAudioStreamModel> { new MediaInfoAudioStreamModel { Channels = 6 } }
+                }
+            };
+
+            var rejectedDecision = new ImportDecision(
+                localEpisode,
+                new ImportRejection(ImportRejectionReason.NotQualityUpgrade, "Not an upgrade"));
+
+            Mocker.GetMock<IMakeImportDecision>()
+                .Setup(m => m.GetImportDecisions(It.IsAny<List<string>>(), _series))
+                .Returns(new List<ImportDecision> { rejectedDecision });
+
+            Mocker.GetMock<IImportApprovedEpisodes>()
+                .Setup(i => i.Import(It.Is<List<ImportDecision>>(d => d.Count == 1 && d[0].Approved), true, null, ImportMode.Copy))
+                .Returns<List<ImportDecision>, bool, DownloadClientItem, ImportMode>((d, _, _, _) =>
+                    new List<ImportResult> { new ImportResult(d[0], new EpisodeFile { Id = 99 }) });
+
+            Subject.Execute(new LocalWatchScanCommand());
+
+            Mocker.GetMock<IImportApprovedEpisodes>().Verify(
+                i => i.Import(It.Is<List<ImportDecision>>(d => d.Count == 1 && d[0].Approved), true, null, ImportMode.Copy),
+                Times.Once());
+            Mocker.GetMock<ILocalWatchBufferRepository>().Verify(
+                r => r.Update(It.Is<LocalWatchBuffer>(b =>
+                    b.Status == LocalWatchStatus.Imported &&
+                    b.Reason.Contains("1080p/2ch -> 1080p/6ch"))),
+                Times.Once());
+        }
+
+        [Test]
+        public void should_ignore_existing_episode_when_allow_upgrades_but_candidate_would_regress_audio()
+        {
+            Environment.SetEnvironmentVariable("SONARR_WATCH_ALLOW_UPGRADES", "true");
+            var path = WatchFile("Test.Show.S01E01.mkv");
+            SetupSettledFile(path);
+
+            Mocker.GetMock<IParsingService>()
+                .Setup(p => p.Map(It.IsAny<ParsedEpisodeInfo>(), 0, 0, null))
+                .Returns(new RemoteEpisode { Series = _series });
+
+            Mocker.GetMock<IMediaFileService>()
+                .Setup(m => m.Get(55))
+                .Returns(new EpisodeFile
+                {
+                    Id = 55,
+                    MediaInfo = new MediaInfoModel
+                    {
+                        Width = 1280,
+                        Height = 720,
+                        AudioStreams = new List<MediaInfoAudioStreamModel> { new MediaInfoAudioStreamModel { Channels = 6 } }
+                    }
+                });
+
+            var episode = Builder<Episode>.CreateNew()
+                .With(e => e.Id = 100)
+                .With(e => e.EpisodeFileId = 55)
+                .Build();
+
+            var localEpisode = new LocalEpisode
+            {
+                Path = path,
+                Series = _series,
+                Episodes = new List<Episode> { episode },
+                MediaInfo = new MediaInfoModel
+                {
+                    Width = 1920,
+                    Height = 1080,
+                    AudioStreams = new List<MediaInfoAudioStreamModel> { new MediaInfoAudioStreamModel { Channels = 2 } }
+                }
+            };
+
+            Mocker.GetMock<IMakeImportDecision>()
+                .Setup(m => m.GetImportDecisions(It.IsAny<List<string>>(), _series))
+                .Returns(new List<ImportDecision> { new ImportDecision(localEpisode) });
+
+            Subject.Execute(new LocalWatchScanCommand());
+
+            Mocker.GetMock<IImportApprovedEpisodes>().Verify(
+                i => i.Import(It.IsAny<List<ImportDecision>>(), It.IsAny<bool>(), It.IsAny<DownloadClientItem>(), It.IsAny<ImportMode>()),
+                Times.Never());
+            Mocker.GetMock<ILocalWatchBufferRepository>().Verify(
+                r => r.Update(It.Is<LocalWatchBuffer>(b =>
+                    b.Status == LocalWatchStatus.Ignored &&
+                    b.Reason.Contains("equal or better"))),
                 Times.Once());
         }
     }

@@ -17,6 +17,8 @@ services:
       - SONARR_WATCH_INTERVAL=30
       # Import mode: Copy (default, non-destructive) or Move
       # - SONARR_IMPORT_MODE=Copy
+      # Allow upgrading existing library files when MediaInfo shows higher resolution or more audio channels without regressions (default: false)
+      # - SONARR_WATCH_ALLOW_UPGRADES=false
       # Minimum video size in MB before tracking (default: 50)
       # - SONARR_WATCH_MIN_SIZE_MB=50
       # Minimum age in seconds since last write before importing (default: 60)

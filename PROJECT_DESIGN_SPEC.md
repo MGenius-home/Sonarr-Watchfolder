@@ -54,6 +54,7 @@ This document outlines the architecture and implementation details for the custo
 | `SONARR_WATCH_FOLDER` | `/watch` | Folder scanned for new video files |
 | `SONARR_WATCH_INTERVAL` | `5` | Minutes between scans |
 | `SONARR_IMPORT_MODE` | `Copy` | `Copy` or `Move` into the library (`Move` removes the source file) |
+| `SONARR_WATCH_ALLOW_UPGRADES` | `false` | When `true`, re-evaluates changed files in `/watch` and upgrades existing `/tv` episodes if FFprobe MediaInfo shows higher resolution (no audio regression) or more audio channels at the same resolution |
 | `SONARR_WATCH_MIN_SIZE_MB` | `50` | Files below this size are never tracked |
 | `SONARR_WATCH_SETTLE_SECONDS` | `60` | Minimum age since last write before a file is processed |
 | `SONARR_WATCH_FAILURE_THRESHOLD` | `5` | Consecutive failures before a file is marked `Failed` and skipped |

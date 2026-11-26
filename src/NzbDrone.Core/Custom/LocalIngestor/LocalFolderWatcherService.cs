@@ -5,6 +5,7 @@ using System.Linq;
 using NLog;
 using NzbDrone.Common.Disk;
 using NzbDrone.Core.Custom.LocalIngestor.Models;
+using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.EpisodeImport;
 using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.Messaging.Commands;
@@ -23,6 +24,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
         private readonly IParsingService _parsingService;
         private readonly IMakeImportDecision _makeImportDecision;
         private readonly IImportApprovedEpisodes _importApprovedEpisodes;
+        private readonly IMediaFileService _mediaFileService;
         private readonly Logger _logger;
 
         private sealed class PendingFile
@@ -38,6 +40,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                                          IParsingService parsingService,
                                          IMakeImportDecision makeImportDecision,
                                          IImportApprovedEpisodes importApprovedEpisodes,
+                                         IMediaFileService mediaFileService,
                                          Logger logger)
         {
             _diskProvider = diskProvider;
@@ -45,6 +48,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
             _parsingService = parsingService;
             _makeImportDecision = makeImportDecision;
             _importApprovedEpisodes = importApprovedEpisodes;
+            _mediaFileService = mediaFileService;
             _logger = logger;
         }
 
@@ -67,6 +71,9 @@ namespace NzbDrone.Core.Custom.LocalIngestor
             int.TryParse(Env("SONARR_WATCH_FAILURE_THRESHOLD"), out var threshold) && threshold > 0
                 ? threshold
                 : WatchFolderRules.DefaultFailureThreshold;
+
+        private static bool AllowUpgrades =>
+            WatchFolderRules.ParseAllowUpgrades(Env("SONARR_WATCH_ALLOW_UPGRADES"));
 
         public void Execute(LocalWatchScanCommand message)
         {
@@ -167,6 +174,26 @@ namespace NzbDrone.Core.Custom.LocalIngestor
 
             if (entry != null && entry.Status != LocalWatchStatus.Pending && entry.Status != LocalWatchStatus.Unmapped)
             {
+                if (AllowUpgrades &&
+                    (entry.Status == LocalWatchStatus.Imported || entry.Status == LocalWatchStatus.Ignored) &&
+                    !_diskProvider.IsFileLocked(path))
+                {
+                    var currentSize = _diskProvider.GetFileSize(path);
+                    var currentLastWrite = _diskProvider.FileGetLastWrite(path);
+
+                    if (WatchFolderRules.HasFileChangedForReeval(entry.Size, currentSize, entry.LastSeen, currentLastWrite))
+                    {
+                        entry.Status = LocalWatchStatus.Pending;
+                        entry.Failures = 0;
+                        entry.Size = currentSize;
+                        entry.LastSeen = now;
+                        entry.Reason = "File updated on disk; waiting to settle";
+                        _repository.Update(entry);
+                        _logger.Info("File {0} changed on disk ({1} bytes), re-queued for upgrade evaluation", path, currentSize);
+                        return null;
+                    }
+                }
+
                 _logger.Debug("File {0} skipped: already handled with status {1}", path, entry.Status);
                 return null;
             }
@@ -307,7 +334,9 @@ namespace NzbDrone.Core.Custom.LocalIngestor
             }
 
             var importMode = WatchFolderRules.ParseImportMode(Env("SONARR_IMPORT_MODE"));
+            var allowUpgrades = AllowUpgrades;
             var toImport = new List<PendingFile>();
+            var upgradeReasons = new Dictionary<string, string>(PathComparer);
 
             foreach (var item in items)
             {
@@ -317,11 +346,53 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                     continue;
                 }
 
-                if (decision.LocalEpisode?.Episodes != null &&
-                    decision.LocalEpisode.Episodes.Any() &&
-                    decision.LocalEpisode.Episodes.Any(ep => ep.EpisodeFileId > 0))
+                var hasExistingFile = decision.LocalEpisode?.Episodes != null &&
+                                      decision.LocalEpisode.Episodes.Any() &&
+                                      decision.LocalEpisode.Episodes.Any(ep => ep.EpisodeFileId > 0);
+
+                if (hasExistingFile)
                 {
-                    SetStatus(item.Entry, LocalWatchStatus.Ignored, item.Path, "Episode already has a file in the library");
+                    if (!allowUpgrades)
+                    {
+                        SetStatus(item.Entry, LocalWatchStatus.Ignored, item.Path, "Episode already has a file in the library");
+                        continue;
+                    }
+
+                    if (!decision.Approved && !WatchFolderRules.IsOnlyUpgradeRejection(decision))
+                    {
+                        var rejections = string.Join(", ", decision.Rejections.Select(r => r.Reason));
+                        SetStatus(item.Entry, LocalWatchStatus.Unmapped, item.Path, rejections);
+                        continue;
+                    }
+
+                    var existingEpisodes = decision.LocalEpisode.Episodes.Where(ep => ep.EpisodeFileId > 0).ToList();
+                    var allUpgraded = true;
+                    var upgradeReason = "Episode already has a file in the library";
+
+                    foreach (var ep in existingEpisodes)
+                    {
+                        var existingFile = ep.EpisodeFile?.Value ?? _mediaFileService.Get(ep.EpisodeFileId);
+                        if (!WatchFolderRules.IsMediaInfoUpgrade(decision.LocalEpisode.MediaInfo, existingFile?.MediaInfo, out upgradeReason))
+                        {
+                            allUpgraded = false;
+                            break;
+                        }
+                    }
+
+                    if (!allUpgraded)
+                    {
+                        SetStatus(item.Entry, LocalWatchStatus.Ignored, item.Path, upgradeReason);
+                        continue;
+                    }
+
+                    if (!decision.Approved)
+                    {
+                        byPath[item.Path] = new ImportDecision(decision.LocalEpisode);
+                    }
+
+                    upgradeReasons[item.Path] = upgradeReason;
+                    _logger.Info("Upgrading existing episode with {0}: {1}", item.Path, upgradeReason);
+                    toImport.Add(item);
                     continue;
                 }
 
@@ -367,7 +438,10 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                     if (result?.Result == ImportResultType.Imported)
                     {
                         item.Entry.Failures = 0;
-                        SetStatus(item.Entry, LocalWatchStatus.Imported, item.Path, "Successfully imported");
+                        var successReason = upgradeReasons.TryGetValue(item.Path, out var reason)
+                            ? reason
+                            : "Successfully imported";
+                        SetStatus(item.Entry, LocalWatchStatus.Imported, item.Path, successReason);
                     }
                     else if (result != null && result.Errors.Any(e => e.Contains("already been imported", StringComparison.OrdinalIgnoreCase)))
                     {
