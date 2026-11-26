@@ -15,6 +15,14 @@ namespace NzbDrone.Core.Test.Custom.LocalIngestor
         [TestCase("/watch/Show S01E01.mp4", true)]
         [TestCase("/watch/Show S01E01.avi", true)]
         [TestCase("/watch/Show S01E01.ts", true)]
+        [TestCase("/watch/Show S01E01.m4v", true)]
+        [TestCase("/watch/Show S01E01.M4V", true)]
+        [TestCase("/watch/Show S01E01.mov", true)]
+        [TestCase("/watch/Show S01E01.m2ts", true)]
+        [TestCase("/watch/Show S01E01.mpg", true)]
+        [TestCase("/watch/Show S01E01.mpeg", true)]
+        [TestCase("/watch/Show S01E01.wmv", true)]
+        [TestCase("/watch/Show S01E01.webm", true)]
         [TestCase("/watch/Show S01E01.txt", false)]
         [TestCase("/watch/Show S01E01.nfo", false)]
         [TestCase("/watch/", false)]
@@ -71,8 +79,8 @@ namespace NzbDrone.Core.Test.Custom.LocalIngestor
         }
 
         [TestCase(50L * 1024 * 1024, true)]
-        [TestCase(50L * 1024 * 1024 + 1, true)]
-        [TestCase(50L * 1024 * 1024 - 1, false)]
+        [TestCase((50L * 1024 * 1024) + 1, true)]
+        [TestCase((50L * 1024 * 1024) - 1, false)]
         [TestCase(0, false)]
         public void meets_min_size_should_enforce_threshold(long sizeBytes, bool expected)
         {
