@@ -2,17 +2,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useState } from 'react';
 import Alert from 'Components/Alert';
 import Label from 'Components/Label';
-import Button from 'Components/Link/Button';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import Table from 'Components/Table/Table';
 import TableBody from 'Components/Table/TableBody';
 import TableRow from 'Components/Table/TableRow';
-import useApiMutation from 'Helpers/Hooks/useApiMutation';
 import useApiQuery from 'Helpers/Hooks/useApiQuery';
 import { kinds } from 'Helpers/Props';
 import InteractiveImportModal from 'InteractiveImport/InteractiveImportModal';
-import translate from 'Utilities/String/translate';
+import UnmappedActionButtons from './UnmappedActionButtons';
 
 export interface LocalWatchBufferItem {
   id: number;
@@ -38,7 +36,7 @@ function formatStatus(status: string | number): {
 } {
   const normalized =
     typeof status === 'number'
-      ? (STATUS_NAMES[status] ?? String(status))
+      ? STATUS_NAMES[status] ?? String(status)
       : String(status);
   const lower = normalized.toLowerCase();
 
@@ -64,61 +62,6 @@ function formatStatus(status: string | number): {
   };
 }
 
-interface UnmappedActionButtonsProps {
-  item: LocalWatchBufferItem;
-  onManualImport: (path: string) => void;
-  onChanged: () => void;
-}
-
-function UnmappedActionButtons({
-  item,
-  onManualImport,
-  onChanged,
-}: UnmappedActionButtonsProps) {
-  const retryMutation = useApiMutation<LocalWatchBufferItem, void>({
-    path: `/localwatchbuffer/${item.id}/retry`,
-    method: 'POST',
-    mutationOptions: {
-      onSuccess: onChanged,
-    },
-  });
-
-  const ignoreMutation = useApiMutation<LocalWatchBufferItem, void>({
-    path: `/localwatchbuffer/${item.id}/ignore`,
-    method: 'POST',
-    mutationOptions: {
-      onSuccess: onChanged,
-    },
-  });
-
-  const isBusy = retryMutation.isPending || ignoreMutation.isPending;
-
-  return (
-    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-      <Button
-        isDisabled={isBusy}
-        onPress={() => onManualImport(item.path)}
-      >
-        {translate('ManualImport')}
-      </Button>
-      <Button
-        kind={kinds.PRIMARY}
-        isDisabled={isBusy}
-        onPress={() => retryMutation.mutate()}
-      >
-        Retry
-      </Button>
-      <Button
-        kind={kinds.DEFAULT}
-        isDisabled={isBusy}
-        onPress={() => ignoreMutation.mutate()}
-      >
-        Ignore
-      </Button>
-    </div>
-  );
-}
-
 function UnmappedTable() {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -126,25 +69,27 @@ function UnmappedTable() {
     undefined
   );
 
-  const { data: files = [], isLoading, error } = useApiQuery<
-    LocalWatchBufferItem[]
-  >({
+  const {
+    data: files = [],
+    isLoading,
+    error,
+  } = useApiQuery<LocalWatchBufferItem[]>({
     path: '/localwatchbuffer',
   });
 
-  const invalidateBuffer = useCallback(() => {
+  const onBufferChanged = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['/localwatchbuffer'] });
   }, [queryClient]);
 
-  const handleManualImport = useCallback((path: string) => {
+  const onManualImport = useCallback((path: string) => {
     setSelectedFolder(path);
     setIsModalOpen(true);
   }, []);
 
-  const handleModalClose = useCallback(() => {
+  const onModalClose = useCallback(() => {
     setIsModalOpen(false);
-    invalidateBuffer();
-  }, [invalidateBuffer]);
+    onBufferChanged();
+  }, [onBufferChanged]);
 
   const columns = [
     { name: 'path', label: 'File Path', isVisible: true },
@@ -160,9 +105,7 @@ function UnmappedTable() {
 
   if (error) {
     return (
-      <Alert kind={kinds.DANGER}>
-        Unable to load watch folder queue.
-      </Alert>
+      <Alert kind={kinds.DANGER}>Unable to load watch folder queue.</Alert>
     );
   }
 
@@ -192,8 +135,8 @@ function UnmappedTable() {
                 <TableRowCell>
                   <UnmappedActionButtons
                     item={file}
-                    onManualImport={handleManualImport}
-                    onChanged={invalidateBuffer}
+                    onManualImport={onManualImport}
+                    onChanged={onBufferChanged}
                   />
                 </TableRowCell>
               </TableRow>
@@ -205,7 +148,7 @@ function UnmappedTable() {
         <InteractiveImportModal
           isOpen={isModalOpen}
           folder={selectedFolder}
-          onModalClose={handleModalClose}
+          onModalClose={onModalClose}
         />
       ) : null}
     </div>

@@ -13,7 +13,7 @@ import RemoteSyncTable from './RemoteSyncTable';
 function RemoteSyncLayout() {
   const queryClient = useQueryClient();
 
-  const syncMutation = useApiMutation<void, void>({
+  const syncMutation = useApiMutation<{ queued: boolean }, void>({
     path: '/remotesync/sync',
     method: 'POST',
     mutationOptions: {
@@ -23,11 +23,11 @@ function RemoteSyncLayout() {
     },
   });
 
-  const handleSyncPress = useCallback(() => {
+  const onSyncPress = useCallback(() => {
     syncMutation.mutate();
   }, [syncMutation]);
 
-  const handleRefreshPress = useCallback(() => {
+  const onRefreshPress = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['/remotesync'] });
   }, [queryClient]);
 
@@ -39,12 +39,12 @@ function RemoteSyncLayout() {
             label="Sync Now"
             iconName={icons.REFRESH}
             isSpinning={syncMutation.isPending}
-            onPress={handleSyncPress}
+            onPress={onSyncPress}
           />
           <PageToolbarButton
             label={translate('Refresh')}
             iconName={icons.UPDATE}
-            onPress={handleRefreshPress}
+            onPress={onRefreshPress}
           />
         </PageToolbarSection>
       </PageToolbar>

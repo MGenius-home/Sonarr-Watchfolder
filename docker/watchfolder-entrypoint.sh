@@ -9,7 +9,7 @@ if [ -n "${PUID:-}" ] && [ "${PUID}" != "0" ]; then
     fi
 
     if ! getent passwd "${PUID}" >/dev/null 2>&1; then
-        useradd -u "${PUID}" -g "${TARGET_GID}" -M -s /usr/sbin/nologin "sonarr_${PUID}"
+        useradd -u "${PUID}" -g "${TARGET_GID}" -d /config -M -s /usr/sbin/nologin "sonarr_${PUID}"
     fi
 
     # Only adjust ownership on /config; never touch /tv or /watch
@@ -17,6 +17,7 @@ if [ -n "${PUID:-}" ] && [ "${PUID}" != "0" ]; then
         chown -R "${PUID}:${TARGET_GID}" /config
     fi
 
+    export HOME=/config
     exec gosu "${PUID}:${TARGET_GID}" dotnet Sonarr.dll -nobrowser -data=/config
 fi
 

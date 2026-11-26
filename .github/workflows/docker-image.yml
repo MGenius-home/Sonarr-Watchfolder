@@ -26,8 +26,9 @@ jobs:
 
       - name: Run backend tests
         run: |
-          dotnet test src/NzbDrone.Core.Test/Sonarr.Core.Test.csproj --filter "FullyQualifiedName~Custom" -p:SolutionDir="${{ github.workspace }}/src/"
-          dotnet test src/NzbDrone.Core.Test/Sonarr.Core.Test.csproj -p:SolutionDir="${{ github.workspace }}/src/"
+          dotnet test src/NzbDrone.Core.Test/Sonarr.Core.Test.csproj --filter "TestCategory!=ManualTest&TestCategory!=WINDOWS&TestCategory!=IntegrationTest&TestCategory!=AutomationTest" -p:SolutionDir="${{ github.workspace }}/src/"
+          dotnet test src/NzbDrone.Api.Test/Sonarr.Api.Test.csproj --filter "TestCategory!=ManualTest&TestCategory!=WINDOWS&TestCategory!=IntegrationTest&TestCategory!=AutomationTest" -p:SolutionDir="${{ github.workspace }}/src/"
+          dotnet test src/NzbDrone.Host.Test/Sonarr.Host.Test.csproj --filter "TestCategory!=ManualTest&TestCategory!=WINDOWS&TestCategory!=IntegrationTest&TestCategory!=AutomationTest" -p:SolutionDir="${{ github.workspace }}/src/"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

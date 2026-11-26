@@ -13,7 +13,7 @@ import UnmappedTable from './UnmappedTable';
 function UnmappedLayout() {
   const queryClient = useQueryClient();
 
-  const scanMutation = useApiMutation<void, void>({
+  const scanMutation = useApiMutation<{ queued: boolean }, void>({
     path: '/localwatchbuffer/scan',
     method: 'POST',
     mutationOptions: {
@@ -23,11 +23,11 @@ function UnmappedLayout() {
     },
   });
 
-  const handleScanPress = useCallback(() => {
+  const onScanPress = useCallback(() => {
     scanMutation.mutate();
   }, [scanMutation]);
 
-  const handleRefreshPress = useCallback(() => {
+  const onRefreshPress = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['/localwatchbuffer'] });
   }, [queryClient]);
 
@@ -39,12 +39,12 @@ function UnmappedLayout() {
             label="Scan Now"
             iconName={icons.REFRESH}
             isSpinning={scanMutation.isPending}
-            onPress={handleScanPress}
+            onPress={onScanPress}
           />
           <PageToolbarButton
             label={translate('Refresh')}
             iconName={icons.UPDATE}
-            onPress={handleRefreshPress}
+            onPress={onRefreshPress}
           />
         </PageToolbarSection>
       </PageToolbar>

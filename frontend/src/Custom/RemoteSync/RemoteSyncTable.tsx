@@ -19,9 +19,11 @@ export interface RemoteSyncHistoryItem {
 }
 
 function RemoteSyncTable() {
-  const { data: rows = [], isLoading, error } = useApiQuery<
-    RemoteSyncHistoryItem[]
-  >({
+  const {
+    data: rows = [],
+    isLoading,
+    error,
+  } = useApiQuery<RemoteSyncHistoryItem[]>({
     path: '/remotesync',
   });
 
@@ -38,9 +40,7 @@ function RemoteSyncTable() {
 
   if (error) {
     return (
-      <Alert kind={kinds.DANGER}>
-        Unable to load remote sync history.
-      </Alert>
+      <Alert kind={kinds.DANGER}>Unable to load remote sync history.</Alert>
     );
   }
 

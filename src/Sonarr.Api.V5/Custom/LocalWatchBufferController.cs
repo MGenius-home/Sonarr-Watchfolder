@@ -78,7 +78,7 @@ namespace Sonarr.Api.V5.Custom
         public IActionResult TriggerScan()
         {
             _commandQueueManager.Push(new LocalWatchScanCommand());
-            return Accepted();
+            return Accepted(new { queued = true });
         }
     }
 }

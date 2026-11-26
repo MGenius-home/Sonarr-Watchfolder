@@ -32,7 +32,7 @@ namespace Sonarr.Api.V5.Custom
         public IActionResult TriggerSync()
         {
             _commandQueueManager.Push(new RemoteSeriesSyncCommand());
-            return Accepted();
+            return Accepted(new { queued = true });
         }
     }
 }
