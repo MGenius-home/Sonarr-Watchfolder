@@ -13,7 +13,35 @@ env:
   IMAGE_NAME: mgenius-home/sonarr-watchfolder
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run backend tests
+        run: |
+          dotnet test src/NzbDrone.Core.Test/Sonarr.Core.Test.csproj --filter "FullyQualifiedName~Custom" -p:SolutionDir="${{ github.workspace }}/src/"
+          dotnet test src/NzbDrone.Core.Test/Sonarr.Core.Test.csproj -p:SolutionDir="${{ github.workspace }}/src/"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Verify frontend build and lint
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
+          yarn lint
+
   build-and-push:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read

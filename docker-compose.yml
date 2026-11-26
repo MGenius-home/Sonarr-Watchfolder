@@ -2,7 +2,7 @@
 #
 # /config — app data (database, settings)
 # /tv     — your media library
-# /watch  — local folder to ingest files from (never modified)
+# /watch  — local folder to ingest files from (never modified in Copy mode)
 services:
   sonarrwatch:
     image: ghcr.io/mgenius-home/sonarr-watchfolder:latest
@@ -11,13 +11,27 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
-      # Watch folder scan interval in minutes
+      # Watch folder path inside container (default: /watch)
+      # - SONARR_WATCH_FOLDER=/watch
+      # Watch folder scan interval in minutes (default: 5)
       - SONARR_WATCH_INTERVAL=30
+      # Import mode: Copy (default, non-destructive) or Move
+      # - SONARR_IMPORT_MODE=Copy
+      # Minimum video size in MB before tracking (default: 50)
+      # - SONARR_WATCH_MIN_SIZE_MB=50
+      # Minimum age in seconds since last write before importing (default: 60)
+      # - SONARR_WATCH_SETTLE_SECONDS=60
+      # Consecutive failures before marking a file Failed (default: 5)
+      # - SONARR_WATCH_FAILURE_THRESHOLD=5
       # Optional: periodically import newly-added series from an existing Sonarr instance
       # - SONARR_SOURCE_URL=http://sonarr:8989
       # - SONARR_SOURCE_API_KEY=your-api-key
       # - SONARR_WATCH_ROOT_FOLDER=/tv
       # - SONARR_SYNC_INTERVAL_MINUTES=360
+      # Lookback window in days for remote series sync (default: 7; 0 = sync all)
+      # - SONARR_SYNC_LOOKBACK_DAYS=7
+      # Local quality profile ID override for synced series (optional)
+      # - SONARR_WATCH_QUALITY_PROFILE_ID=1
     volumes:
       - ./config:/config
       - /path/to/library:/tv
