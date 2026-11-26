@@ -81,6 +81,7 @@ namespace NzbDrone.Core.Test.ParserTests
             var result = IsoLanguages.Find(isoCode);
             result.Language.Should().Be(Language.Georgian);
         }
+
         [TestCase("IT", "Italian")]
         [TestCase("ITA", "Italian")]
         [TestCase("ID", "Indonesian")]
