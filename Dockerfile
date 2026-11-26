@@ -20,7 +20,7 @@ WORKDIR /app
 COPY --from=backend-build /app/out .
 COPY --from=frontend-build /src/_output/UI ./UI
 COPY docker/watchfolder-entrypoint.sh /app/watchfolder-entrypoint.sh
-RUN sed -i 's/\r$//' /app/watchfolder-entrypoint.sh && chmod +x /app/watchfolder-entrypoint.sh
+RUN sed -i 's/\r$//' /app/watchfolder-entrypoint.sh && chmod +x /app/watchfolder-entrypoint.sh && if [ -f /app/ffprobe ]; then chmod a+rx /app/ffprobe; fi
 
 # Volume configuration
 VOLUME ["/config", "/tv", "/watch"]
