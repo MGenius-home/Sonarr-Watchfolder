@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using NLog;
 using NzbDrone.Common.Disk;
@@ -181,13 +182,19 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                 return null;
             }
 
-            Series series;
+            Series series = null;
 
             try
             {
-                series = _parsingService.GetSeries(parsedEpisodeInfo.SeriesTitle);
+                var remoteEpisode = _parsingService.Map(parsedEpisodeInfo, 0, 0, null);
+                series = remoteEpisode?.Series;
+
+                if (series == null)
+                {
+                    series = _parsingService.GetSeries(Path.GetFileName(path));
+                }
             }
-            catch (NzbDrone.Core.Tv.MultipleSeriesFoundException)
+            catch (MultipleSeriesFoundException)
             {
                 // Ambiguous title (e.g. an original and a remake sharing a name): needs manual review
                 SetStatus(entry, LocalWatchStatus.Unmapped, path, string.Format("Multiple library series match '{0}'", parsedEpisodeInfo.SeriesTitle));
@@ -243,16 +250,18 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                     continue;
                 }
 
+                if (decision.LocalEpisode?.Episodes != null &&
+                    decision.LocalEpisode.Episodes.Any() &&
+                    decision.LocalEpisode.Episodes.Any(ep => ep.EpisodeFileId > 0))
+                {
+                    SetStatus(item.Entry, LocalWatchStatus.Ignored, item.Path, "Episode already has a file in the library");
+                    continue;
+                }
+
                 if (!decision.Approved)
                 {
                     var rejections = string.Join(", ", decision.Rejections.Select(r => r.Reason));
                     SetStatus(item.Entry, LocalWatchStatus.Unmapped, item.Path, rejections);
-                    continue;
-                }
-
-                if (decision.LocalEpisode.Episodes.Any(ep => ep.EpisodeFileId > 0))
-                {
-                    SetStatus(item.Entry, LocalWatchStatus.Ignored, item.Path, "Episode already has a file in the library");
                     continue;
                 }
 
@@ -271,12 +280,39 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                     _logger.Info("Importing approved file: {0}", item.Path);
                 }
 
-                _importApprovedEpisodes.Import(toImport.Select(i => byPath[i.Path]).ToList(), true, null, importMode);
+                var results = _importApprovedEpisodes.Import(toImport.Select(i => byPath[i.Path]).ToList(), true, null, importMode)
+                    ?? new List<ImportResult>();
+
+                var resultByPath = new Dictionary<string, ImportResult>(StringComparer.OrdinalIgnoreCase);
+                foreach (var result in results)
+                {
+                    var resultPath = result?.ImportDecision?.LocalEpisode?.Path;
+                    if (!string.IsNullOrEmpty(resultPath))
+                    {
+                        resultByPath[resultPath] = result;
+                    }
+                }
 
                 foreach (var item in toImport)
                 {
-                    item.Entry.Failures = 0;
-                    SetStatus(item.Entry, LocalWatchStatus.Imported, item.Path, "Successfully imported");
+                    resultByPath.TryGetValue(item.Path, out var result);
+
+                    if (result?.Result == ImportResultType.Imported)
+                    {
+                        item.Entry.Failures = 0;
+                        SetStatus(item.Entry, LocalWatchStatus.Imported, item.Path, "Successfully imported");
+                    }
+                    else if (result != null && result.Errors.Any(e => e.Contains("already been imported", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        SetStatus(item.Entry, LocalWatchStatus.Ignored, item.Path, string.Join("; ", result.Errors));
+                    }
+                    else
+                    {
+                        var errorSummary = result != null && result.Errors.Any()
+                            ? string.Join("; ", result.Errors)
+                            : "Import returned no result";
+                        MarkFailure(item.Entry, item.Path, errorSummary);
+                    }
                 }
             }
             catch (Exception ex)
@@ -292,23 +328,43 @@ namespace NzbDrone.Core.Custom.LocalIngestor
         /// <summary>Records a processing failure with escalating log noise and a hard stop after FailureThreshold attempts.</summary>
         private void MarkFailure(LocalWatchBuffer entry, string path, Exception ex)
         {
+            MarkFailure(entry, path, ex?.Message ?? "Unknown error", ex);
+        }
+
+        private void MarkFailure(LocalWatchBuffer entry, string path, string errorMessage, Exception ex = null)
+        {
             entry.Failures++;
 
             if (entry.Failures >= FailureThreshold)
             {
                 entry.Status = LocalWatchStatus.Failed;
                 _repository.Update(entry);
-                _logger.Error(ex, "File {0}: failed {1} times, giving up (status Failed)", path, entry.Failures);
+                if (ex != null)
+                {
+                    _logger.Error(ex, "File {0}: failed {1} times, giving up (status Failed)", path, entry.Failures);
+                }
+                else
+                {
+                    _logger.Error("File {0}: failed {1} times, giving up (status Failed): {2}", path, entry.Failures, errorMessage);
+                }
+
                 return;
             }
 
             if (entry.Failures == 1)
             {
-                _logger.Warn(ex, "File {0}: first failure, will retry next scan", path);
+                if (ex != null)
+                {
+                    _logger.Warn(ex, "File {0}: first failure, will retry next scan", path);
+                }
+                else
+                {
+                    _logger.Warn("File {0}: first failure, will retry next scan: {1}", path, errorMessage);
+                }
             }
             else
             {
-                _logger.Debug("File {0}: failure {1} of {2}: {3}", path, entry.Failures, FailureThreshold, ex.Message);
+                _logger.Debug("File {0}: failure {1} of {2}: {3}", path, entry.Failures, FailureThreshold, errorMessage);
             }
 
             _repository.Update(entry);

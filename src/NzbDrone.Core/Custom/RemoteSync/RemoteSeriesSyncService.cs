@@ -113,7 +113,7 @@ namespace NzbDrone.Core.Custom.RemoteSync
 
             try
             {
-                _historyRepository.DeleteOlderThan(DateTime.UtcNow.AddDays(HistoryRetentionDays));
+                _historyRepository.DeleteOlderThan(DateTime.UtcNow.AddDays(-HistoryRetentionDays));
             }
             catch (Exception ex)
             {
