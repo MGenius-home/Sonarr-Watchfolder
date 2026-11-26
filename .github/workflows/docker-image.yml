@@ -28,6 +28,8 @@ jobs:
         run: |
           dotnet test src/NzbDrone.Core.Test/Sonarr.Core.Test.csproj --filter "TestCategory!=ManualTest&TestCategory!=WINDOWS&TestCategory!=IntegrationTest&TestCategory!=AutomationTest" -p:SolutionDir="${{ github.workspace }}/src/"
           dotnet test src/NzbDrone.Api.Test/Sonarr.Api.Test.csproj --filter "TestCategory!=ManualTest&TestCategory!=WINDOWS&TestCategory!=IntegrationTest&TestCategory!=AutomationTest" -p:SolutionDir="${{ github.workspace }}/src/"
+          dotnet build src/NzbDrone.Mono/Sonarr.Mono.csproj -p:SolutionDir="${{ github.workspace }}/src/"
+          cp -rn _output/net10.0/. _tests/net10.0/
           dotnet test src/NzbDrone.Host.Test/Sonarr.Host.Test.csproj --filter "TestCategory!=ManualTest&TestCategory!=WINDOWS&TestCategory!=IntegrationTest&TestCategory!=AutomationTest" -p:SolutionDir="${{ github.workspace }}/src/"
 
       - name: Set up Node.js
