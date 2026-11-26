@@ -67,9 +67,7 @@ function RemoteSyncTable() {
         </Label>
       </div>
 
-      {!rows.length ? (
-        <Alert kind={kinds.INFO}>No remote sync history recorded yet.</Alert>
-      ) : (
+      {rows.length ? (
         <Table columns={columns}>
           <TableBody>
             {rows.map((row) => {
@@ -92,6 +90,8 @@ function RemoteSyncTable() {
             })}
           </TableBody>
         </Table>
+      ) : (
+        <Alert kind={kinds.INFO}>No remote sync history recorded yet.</Alert>
       )}
     </div>
   );

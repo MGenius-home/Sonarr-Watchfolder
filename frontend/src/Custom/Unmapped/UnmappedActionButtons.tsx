@@ -51,18 +51,10 @@ function UnmappedActionButtons({
       <Button isDisabled={isBusy} onPress={onManualImportPress}>
         {translate('ManualImport')}
       </Button>
-      <Button
-        kind={kinds.PRIMARY}
-        isDisabled={isBusy}
-        onPress={onRetryPress}
-      >
+      <Button kind={kinds.PRIMARY} isDisabled={isBusy} onPress={onRetryPress}>
         Retry
       </Button>
-      <Button
-        kind={kinds.DEFAULT}
-        isDisabled={isBusy}
-        onPress={onIgnorePress}
-      >
+      <Button kind={kinds.DEFAULT} isDisabled={isBusy} onPress={onIgnorePress}>
         Ignore
       </Button>
     </div>
