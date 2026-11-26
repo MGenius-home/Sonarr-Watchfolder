@@ -35,7 +35,7 @@ namespace NzbDrone.Core.Custom.RemoteSync
 
             var request = new HttpRequestBuilder(baseUrl.TrimEnd('/'))
                 .Resource("/api/v3/series")
-                .AddQueryParam("apikey", apiKey)
+                .SetHeader("X-Api-Key", apiKey)
                 .Build();
 
             request.LogHttpError = true;
@@ -43,7 +43,7 @@ namespace NzbDrone.Core.Custom.RemoteSync
 
             var response = _httpClient.Execute(request);
 
-            return Json.Deserialize<List<RemoteSeries>>(response.Content);
+            return Json.Deserialize<List<RemoteSeries>>(response.Content) ?? new List<RemoteSeries>();
         }
     }
 }
