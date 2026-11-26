@@ -1,8 +1,7 @@
-using System.Collections.Generic;
-using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using NzbDrone.Core.Custom.RemoteSync;
 using NzbDrone.Core.Custom.RemoteSync.Models;
+using NzbDrone.Core.Messaging.Commands;
 using Sonarr.Http;
 
 namespace Sonarr.Api.V5.Custom
@@ -11,10 +10,13 @@ namespace Sonarr.Api.V5.Custom
     public class RemoteSyncController : Controller
     {
         private readonly IRemoteSyncHistoryRepository _repository;
+        private readonly IManageCommandQueue _commandQueueManager;
 
-        public RemoteSyncController(IRemoteSyncHistoryRepository repository)
+        public RemoteSyncController(IRemoteSyncHistoryRepository repository,
+                                    IManageCommandQueue commandQueueManager)
         {
             _repository = repository;
+            _commandQueueManager = commandQueueManager;
         }
 
         [HttpGet]
@@ -24,6 +26,13 @@ namespace Sonarr.Api.V5.Custom
                               .OrderByDescending(h => h.SyncedAt)
                               .Take(100)
                               .ToList();
+        }
+
+        [HttpPost("sync")]
+        public IActionResult TriggerSync()
+        {
+            _commandQueueManager.Push(new RemoteSeriesSyncCommand());
+            return Accepted();
         }
     }
 }
