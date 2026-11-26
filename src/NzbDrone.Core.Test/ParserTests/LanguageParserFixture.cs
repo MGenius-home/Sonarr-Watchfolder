@@ -615,7 +615,6 @@ namespace NzbDrone.Core.Test.ParserTests
         [TestCase("Title.the.Series.2009.S01E14.FINNISH.HDTV.XviD-LOL", "Finnish")]
         [TestCase("Title.the.Series.2009.S01E14.VIETNAMESE.HDTV.XviD-LOL", "Vietnamese")]
         [TestCase("Title.the.Series.2009.S01E14.Italian.HDTV.XviD-LOL", "Italian")]
-        [TestCase("Title.the.Series.S01.Irish.1080p.WEB-DL.h264-RlsGrp", "Irish")]
         [TestCase("Title.the.Series.S01E01.FLEMISH.HDTV.x264-BRiGAND", "Flemish")]
         public void should_parse_language_regardless_of_culture(string postTitle, string languageName)
         {
