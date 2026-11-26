@@ -142,7 +142,34 @@ personal fork, revisit if ever contributing back.
 - [ ] Apply security fixes first (auth, API controllers, XML/HTTP parsing, Datastore),
       each as its own commit with upstream SHA referenced
 - [ ] Apply relevant core bug fixes (parsing, importing, UI crashes)
-- [ ] Repeat quarterly or before any server-facing exposure change
+- [x] Repeat quarterly or before any server-facing exposure change
+
+### Phase 4b — Second upstream sync (`upstream/develop` @ `03f822c782`) ✅ COMPLETE 2026-11-25
+
+- **Baseline**: `upstream/develop` at `03f822c782` (385 commits ahead of `upstream/v5-develop`).
+- **Batch E — Security & Runtime Dependencies (19 commits + Swashbuckle fix)**:
+  - `59a1175b6f` .NET 10.0.15 (`global.json` `10.0.204` + `rollForward: latestFeature`, keeping NUnit 3.14.0 & Ical.Net 4.3.1), `bdeefe8353` FFMpegCore 6.0.0, `03f822c782` FFprobe 9.1, `56d29e02ae` Dapper/MailKit/Polly, `e5617ddaa3` Dapper/Npgsql, `bd3d0229b8` Swashbuckle.AspNetCore 10.3.1 (fixes `Microsoft.OpenApi` CVE), `b59552cfea` + `75788feec8` ImageSharp decoder restriction & advisory suppression, `93bed3223d` remove `System.Drawing.Common`, `c340e50b7f` constant-time API key & password hash comparison, `b0bc052701` path traversal validation, `9efa5a0698` mask passwords/secrets from settings API, `bc7c87def0` disable auth endpoint response cache, `91aeb5260c` + `8e25f16315` + `c018578e4b` + `2247ad959e` log cleansing, `f089df054f` zip extraction hardening, `a83ffea245` OWASP PBKDF2 iterations, `0bdf2087a2` login lockout after failed attempts.
+- **Batch F — Parsing & MediaInfo (8 commits)**:
+  - `b84a621e99`, `6421bb6218`, `808d483613`, `91c4ae17c0`, `da7fa1f8d7`, `4cfd439cbd`, `b10180c37e`, `d3eee35422`.
+- **Batch G — Import, Manual Import & Library (11 commits)**:
+  - `7c4c81a418`, `615764804e`, `a2c90d021f`, `8afe4f9c62`, `ae29755cfa`, `69fd6f1344`, `8c50e4469e`, `f382d6e8f9`, `f1513a82ec`, `da990630a1`, `69ff21107b`.
+- **Batch H — Core Stability, Caching & Backup (7 commits)**:
+  - `460022a72e`, `6c1dba24a2`, `3abdde77e2`, `4ebfc48477`, `c0023b4c22`, `dbb5c33f14`, `1a8d5a2b1b`.
+- **Skipped from Batches E–H (with reasons)**:
+  - `162dcb5834` (*Reject releases and imports that match multiple series*): skipped due to heavy conflicts across 7 files (deleted test fixtures `MultiSeasonImportFixture`/`FindByTitleInexactFixture` and refactored `SeriesRepository`/`TrackedDownloadService`/`ParsingService` from skipped intermediate commits). `LocalFolderWatcherService` continues catching `MultipleSeriesFoundException`.
+  - `70829703c9` (*Don't cache media covers that aren't downloaded*): skipped because it depends on the `?h=` media cover URL hashing rewrite not present in this fork (`MediaCoverService` here uses `?lastWrite=` and already checks `FileExists`).
+
+## Phase 6 — Watchfolder Reliability, UX & Infra Upgrades ✅ DONE 2026-11-25
+
+- [x] Fix `RemoteSeriesSyncService` history pruning cutoff (`-HistoryRetentionDays`)
+- [x] Fix `LocalFolderWatcherService`: inspect `ImportResult` list, use `ParsingService.Map` (with filename fallback), check `EpisodeFileId > 0` before `!decision.Approved`
+- [x] Migration numbering rule: custom migrations use reserved `900001+` range (`900001_add_local_watch_buffer_reason`) to avoid colliding with upstream migrations `236–241+`
+- [x] Auto-clear manually imported files via `IHandle<EpisodeImportedEvent>`
+- [x] Scan-start `_repository.All()` dictionary cache (OS-appropriate comparer, single DB update per file), expanded `VideoExtensions`, subfolder `folderInfo` grouping
+- [x] `RemoteSeriesSyncService` (`SeriesType`, `SeasonFolder`, `QualityProfileId` resolution/fallback, `SONARR_SYNC_LOOKBACK_DAYS`, `X-Api-Key` header)
+- [x] V5 API (`/retry`, `/ignore`, `/scan`, `/sync`, `?status=`) and React UI (`UnmappedTable`/`Layout`, `RemoteSyncTable`/`Layout`)
+- [x] `Dockerfile` (`gosu` PUID/PGID entrypoint touching `/config` only, `HEALTHCHECK`), `docker-compose.yml` env docs, `.github/workflows/docker-image.yml` CI test job
+- [x] Unit test suites: `LocalFolderWatcherServiceFixture`, `RemoteSeriesSyncServiceFixture`, `RemoteSonarrClientFixture`, expanded `WatchFolderRulesFixture`
 
 ## Phase 5 — Testing strategy (server access)
 
