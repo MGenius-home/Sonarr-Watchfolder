@@ -46,6 +46,7 @@ namespace Sonarr.Http.Middleware
             {
                 return false;
             }
+
             var path = request.Path.Value ?? "";
 
             if (path.EndsWith("/index.js"))
