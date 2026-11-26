@@ -41,7 +41,7 @@ Root causes identified:
 - [x] Watcher: only log Unmapped/Ignored decisions once per file (log at Debug on
       subsequent scans, Info on first decision or status change).
 - [x] Add history table pruning (e.g. delete rows older than 30 days) during the sync run.
-- [ ] Optional: surface counts in the RemoteSync UI header instead of raw row spam.
+- [x] Surface counts (`Added` / `Failed`) and `Sync Now` trigger in the RemoteSync UI.
 
 ## Phase 3 — Rework the ingest ("move file") implementation ✅ DONE 2026-08-23
 

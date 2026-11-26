@@ -34,7 +34,8 @@ This document outlines the architecture and implementation details for the custo
 ## Today's Updates (May 10, 2026)
 
 ### 1. Performance & Stability Improvements
-- **Video Filtering**: Updated the scanner to only process common video extensions (`.mkv`, `.mp4`, `.avi`, `.ts`). This prevents the engine from stalling on metadata files or shortcuts.
+- **Video Filtering**: Updated the scanner to only process video extensions (`.mkv`, `.mp4`, `.avi`, `.ts`, `.m4v`, `.mov`, `.m2ts`, `.mpg`, `.mpeg`, `.wmv`, `.webm`). This prevents the engine from stalling on metadata files or shortcuts.
+- **Scan Caching & Subfolder Context**: Loads `LocalWatchBuffer` once per scan (OS-appropriate path comparison), groups pending files by `(Series.Id, ParentFolder)`, and passes parsed subfolder metadata (`folderInfo`) for season-pack folders.
 - **IDE Stability**: Implemented `.cursorignore` to prevent the IDE from crashing when indexing the large media folders (`tv/`, `watch/`).
 - **Build Speed**: Added `.dockerignore` to exclude build artifacts and media folders, reducing Docker context transfer from 3GB to ~20MB.
 
@@ -56,9 +57,17 @@ This document outlines the architecture and implementation details for the custo
 | `SONARR_WATCH_MIN_SIZE_MB` | `50` | Files below this size are never tracked |
 | `SONARR_WATCH_SETTLE_SECONDS` | `60` | Minimum age since last write before a file is processed |
 | `SONARR_WATCH_FAILURE_THRESHOLD` | `5` | Consecutive failures before a file is marked `Failed` and skipped |
-| `SONARR_SOURCE_URL` / `SONARR_SOURCE_API_KEY` | – | Upstream Sonarr to pull newly-added series from |
+| `SONARR_SOURCE_URL` / `SONARR_SOURCE_API_KEY` | – | Upstream Sonarr to pull newly-added series from (sent via `X-Api-Key` header) |
 | `SONARR_SYNC_INTERVAL_MINUTES` | `360` | Remote series sync interval |
+| `SONARR_SYNC_LOOKBACK_DAYS` | `7` | Lookback window in days for remote sync (`0` syncs all series) |
 | `SONARR_WATCH_ROOT_FOLDER` | `/tv` | Root folder used when adding synced series |
+| `SONARR_WATCH_QUALITY_PROFILE_ID` | – | Optional local quality profile ID override for synced series (falls back to remote profile if valid locally, else first local profile) |
+
+### Migrations & API
+- **Custom Migration Range**: `900001+` is reserved for custom watchfolder migrations (e.g. `900001_add_local_watch_buffer_reason` adding `Reason` to `LocalWatchBuffer`) to avoid colliding with upstream Sonarr migrations (`236+`).
+- **Auto-Clear on Import**: `LocalFolderWatcherService` handles `EpisodeImportedEvent` to mark manually imported watchbuffer entries `Imported`.
+- **V5 Endpoints**: `GET /api/v5/localwatchbuffer` (`?status=unmapped|failed|all|...`), `POST /api/v5/localwatchbuffer/{id}/retry`, `POST /api/v5/localwatchbuffer/{id}/ignore`, `POST /api/v5/localwatchbuffer/scan`, and `POST /api/v5/remotesync/sync`.
+- **Container Entrypoint**: `docker/watchfolder-entrypoint.sh` applies `PUID`/`PGID` via `gosu` and `chown`s `/config` only (never `/tv` or `/watch`).
 
 ### Ingest behaviour
 - **Settling**: a file is only imported when its size is unchanged since the previous
