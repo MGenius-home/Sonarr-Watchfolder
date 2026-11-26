@@ -6,15 +6,18 @@ using NLog;
 using NzbDrone.Common.Disk;
 using NzbDrone.Core.Custom.LocalIngestor.Models;
 using NzbDrone.Core.MediaFiles.EpisodeImport;
+using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.Messaging.Commands;
+using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Parser;
-using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Tv;
 
 namespace NzbDrone.Core.Custom.LocalIngestor
 {
-    public class LocalFolderWatcherService : IExecute<LocalWatchScanCommand>
+    public class LocalFolderWatcherService : IExecute<LocalWatchScanCommand>, IHandle<EpisodeImportedEvent>
     {
+        private const int MaxReasonLength = 500;
+
         private readonly IDiskProvider _diskProvider;
         private readonly ILocalWatchBufferRepository _repository;
         private readonly IParsingService _parsingService;
@@ -27,6 +30,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
             public string Path { get; set; }
             public LocalWatchBuffer Entry { get; set; }
             public Series Series { get; set; }
+            public string ParentFolder { get; set; }
         }
 
         public LocalFolderWatcherService(IDiskProvider diskProvider,
@@ -43,6 +47,9 @@ namespace NzbDrone.Core.Custom.LocalIngestor
             _importApprovedEpisodes = importApprovedEpisodes;
             _logger = logger;
         }
+
+        private static StringComparer PathComparer =>
+            OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
         private static string Env(string name) => Environment.GetEnvironmentVariable(name);
 
@@ -76,8 +83,18 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                         .Where(WatchFolderRules.IsVideoFile)
                         .ToList();
 
-            var fileSet = new HashSet<string>(files, StringComparer.OrdinalIgnoreCase);
-            PruneMissingPaths(fileSet);
+            var fileSet = new HashSet<string>(files, PathComparer);
+            var existingEntries = _repository.All().ToList();
+            var entriesByPath = new Dictionary<string, LocalWatchBuffer>(PathComparer);
+            foreach (var existing in existingEntries)
+            {
+                if (!string.IsNullOrEmpty(existing.Path))
+                {
+                    entriesByPath[existing.Path] = existing;
+                }
+            }
+
+            PruneMissingPaths(fileSet, existingEntries);
 
             _logger.Info("Found {0} video files to process", files.Count);
 
@@ -88,7 +105,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
             {
                 try
                 {
-                    var item = Prepare(file, now);
+                    var item = Prepare(file, now, entriesByPath);
                     if (item != null)
                     {
                         pending.Add(item);
@@ -100,18 +117,53 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                 }
             }
 
-            foreach (var group in pending.GroupBy(p => p.Series.Id))
+            var watchFolderFull = NormalizeFolderPath(watchFolder);
+            var grouped = new Dictionary<string, List<PendingFile>>(PathComparer);
+
+            foreach (var item in pending)
             {
-                ImportGroup(group.First().Series, group.ToList());
+                var key = $"{item.Series.Id}\0{item.ParentFolder}";
+                if (!grouped.TryGetValue(key, out var groupItems))
+                {
+                    groupItems = new List<PendingFile>();
+                    grouped[key] = groupItems;
+                }
+
+                groupItems.Add(item);
+            }
+
+            foreach (var groupItems in grouped.Values)
+            {
+                ImportGroup(groupItems[0].Series, groupItems, watchFolderFull, groupItems[0].ParentFolder);
             }
 
             _logger.Info("Local watch folder scan completed. Processed: {0}/{1}", pending.Count, files.Count);
         }
 
-        /// <summary>Applies the cheap gates for one file. Returns null when nothing more should happen this scan.</summary>
-        private PendingFile Prepare(string path, DateTime now)
+        public void Handle(EpisodeImportedEvent message)
         {
+            var path = message?.EpisodeInfo?.Path;
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
             var entry = _repository.GetByPath(path);
+            if (entry != null && entry.Status != LocalWatchStatus.Imported)
+            {
+                entry.Status = LocalWatchStatus.Imported;
+                entry.Failures = 0;
+                entry.Reason = "Imported";
+                entry.LastSeen = DateTime.UtcNow;
+                _repository.Update(entry);
+                _logger.Info("File {0}: marked Imported via episode import event", path);
+            }
+        }
+
+        /// <summary>Applies the cheap gates for one file. Returns null when nothing more should happen this scan.</summary>
+        private PendingFile Prepare(string path, DateTime now, Dictionary<string, LocalWatchBuffer> entriesByPath)
+        {
+            entriesByPath.TryGetValue(path, out var entry);
 
             if (entry != null && entry.Status != LocalWatchStatus.Pending && entry.Status != LocalWatchStatus.Unmapped)
             {
@@ -126,8 +178,9 @@ namespace NzbDrone.Core.Custom.LocalIngestor
             }
 
             var size = _diskProvider.GetFileSize(path);
+            var isNewEntry = entry == null;
 
-            if (entry == null)
+            if (isNewEntry)
             {
                 // Don't create buffer rows for files too small to be episodes
                 if (!WatchFolderRules.MeetsMinSize(size, MinSizeBytes))
@@ -144,6 +197,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                     Size = size
                 };
                 _repository.Insert(entry);
+                entriesByPath[path] = entry;
             }
             else
             {
@@ -165,13 +219,12 @@ namespace NzbDrone.Core.Custom.LocalIngestor
             if (!WatchFolderRules.IsSettled(now, lastWrite, SettleAge))
             {
                 _logger.Debug("File {0} is still settling", path);
-                _repository.Update(entry);
-                return null;
-            }
+                if (!isNewEntry)
+                {
+                    _repository.Update(entry);
+                }
 
-            if (entry.Status == LocalWatchStatus.Pending || entry.Status == LocalWatchStatus.Unmapped)
-            {
-                _repository.Update(entry);
+                return null;
             }
 
             var parsedEpisodeInfo = Parser.Parser.ParsePath(path);
@@ -207,17 +260,31 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                 return null;
             }
 
-            return new PendingFile { Path = path, Entry = entry, Series = series };
+            return new PendingFile
+            {
+                Path = path,
+                Entry = entry,
+                Series = series,
+                ParentFolder = NormalizeFolderPath(Path.GetDirectoryName(path))
+            };
         }
 
-        private void ImportGroup(Series series, List<PendingFile> items)
+        private void ImportGroup(Series series, List<PendingFile> items, string watchFolderFull, string parentFolderFull)
         {
             var paths = items.Select(i => i.Path).ToList();
             List<ImportDecision> decisions;
 
             try
             {
-                decisions = _makeImportDecision.GetImportDecisions(paths, series);
+                if (!string.IsNullOrEmpty(parentFolderFull) && !PathComparer.Equals(parentFolderFull, watchFolderFull))
+                {
+                    var folderInfo = Parser.Parser.ParseTitle(Path.GetFileName(parentFolderFull));
+                    decisions = _makeImportDecision.GetImportDecisions(paths, series, null, null, folderInfo, false, false);
+                }
+                else
+                {
+                    decisions = _makeImportDecision.GetImportDecisions(paths, series);
+                }
             }
             catch (Exception ex)
             {
@@ -230,7 +297,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                 return;
             }
 
-            var byPath = new Dictionary<string, ImportDecision>(StringComparer.OrdinalIgnoreCase);
+            var byPath = new Dictionary<string, ImportDecision>(PathComparer);
             foreach (var decision in decisions)
             {
                 if (decision.LocalEpisode?.Path != null)
@@ -283,7 +350,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
                 var results = _importApprovedEpisodes.Import(toImport.Select(i => byPath[i.Path]).ToList(), true, null, importMode)
                     ?? new List<ImportResult>();
 
-                var resultByPath = new Dictionary<string, ImportResult>(StringComparer.OrdinalIgnoreCase);
+                var resultByPath = new Dictionary<string, ImportResult>(PathComparer);
                 foreach (var result in results)
                 {
                     var resultPath = result?.ImportDecision?.LocalEpisode?.Path;
@@ -334,6 +401,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
         private void MarkFailure(LocalWatchBuffer entry, string path, string errorMessage, Exception ex = null)
         {
             entry.Failures++;
+            entry.Reason = TruncateReason(errorMessage);
 
             if (entry.Failures >= FailureThreshold)
             {
@@ -374,6 +442,7 @@ namespace NzbDrone.Core.Custom.LocalIngestor
         {
             var changed = entry.Status != newStatus;
             entry.Status = newStatus;
+            entry.Reason = TruncateReason(reason);
             _repository.Update(entry);
 
             if (changed)
@@ -388,9 +457,9 @@ namespace NzbDrone.Core.Custom.LocalIngestor
         }
 
         /// <summary>Removes buffer rows whose source file no longer exists on disk.</summary>
-        private void PruneMissingPaths(HashSet<string> currentFiles)
+        private void PruneMissingPaths(HashSet<string> currentFiles, List<LocalWatchBuffer> existingEntries)
         {
-            var staleIds = _repository.All()
+            var staleIds = existingEntries
                 .Where(row => !currentFiles.Contains(row.Path) && !_diskProvider.FileExists(row.Path))
                 .Select(row => row.Id)
                 .ToList();
@@ -399,6 +468,33 @@ namespace NzbDrone.Core.Custom.LocalIngestor
             {
                 _repository.DeleteMany(staleIds);
                 _logger.Info("Pruned {0} stale watch folder entries", staleIds.Count);
+            }
+        }
+
+        private static string TruncateReason(string reason)
+        {
+            if (string.IsNullOrEmpty(reason))
+            {
+                return reason;
+            }
+
+            return reason.Length > MaxReasonLength ? reason.Substring(0, MaxReasonLength) : reason;
+        }
+
+        private static string NormalizeFolderPath(string folder)
+        {
+            if (string.IsNullOrWhiteSpace(folder))
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                return Path.GetFullPath(folder).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            }
+            catch (Exception)
+            {
+                return folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             }
         }
     }

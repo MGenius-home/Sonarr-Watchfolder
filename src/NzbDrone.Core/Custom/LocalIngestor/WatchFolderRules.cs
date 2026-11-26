@@ -8,12 +8,15 @@ namespace NzbDrone.Core.Custom.LocalIngestor
     /// </summary>
     public static class WatchFolderRules
     {
-        public static readonly string[] VideoExtensions = { ".mkv", ".mp4", ".avi", ".ts" };
-
         public const ImportMode DefaultImportMode = ImportMode.Copy;
         public const long DefaultMinSizeMb = 50;
         public const int DefaultFailureThreshold = 5;
         public const int DefaultSettleSeconds = 60;
+
+        public static readonly string[] VideoExtensions =
+        {
+            ".mkv", ".mp4", ".avi", ".ts", ".m4v", ".mov", ".m2ts", ".mpg", ".mpeg", ".wmv", ".webm"
+        };
 
         public static bool IsVideoFile(string path)
         {

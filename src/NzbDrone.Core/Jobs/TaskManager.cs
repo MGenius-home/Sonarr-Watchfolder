@@ -7,6 +7,8 @@ using NzbDrone.Core.Backup;
 using NzbDrone.Core.Caching;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Configuration.Events;
+using NzbDrone.Core.Custom.LocalIngestor;
+using NzbDrone.Core.Custom.RemoteSync;
 using NzbDrone.Core.DataAugmentation.Scene;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.HealthCheck;
@@ -19,8 +21,6 @@ using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Tv.Commands;
 using NzbDrone.Core.Update.Commands;
-using NzbDrone.Core.Custom.LocalIngestor;
-using NzbDrone.Core.Custom.RemoteSync;
 
 namespace NzbDrone.Core.Jobs
 {

@@ -7,6 +7,7 @@ using NzbDrone.Core.Authentication;
 using NzbDrone.Core.AutoTagging.Specifications;
 using NzbDrone.Core.Blocklisting;
 using NzbDrone.Core.Configuration;
+using NzbDrone.Core.Custom.LocalIngestor.Models;
 using NzbDrone.Core.CustomFilters;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.DataAugmentation.Scene;
@@ -41,7 +42,6 @@ using NzbDrone.Core.Tags;
 using NzbDrone.Core.ThingiProvider;
 using NzbDrone.Core.Tv;
 using NzbDrone.Core.Update.History;
-using NzbDrone.Core.Custom.LocalIngestor.Models;
 using static Dapper.SqlMapper;
 
 namespace NzbDrone.Core.Datastore

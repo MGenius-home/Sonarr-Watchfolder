@@ -10,5 +10,6 @@ namespace NzbDrone.Core.Custom.LocalIngestor.Models
         public DateTime LastSeen { get; set; }
         public long? Size { get; set; }
         public int Failures { get; set; }
+        public string Reason { get; set; }
     }
 }
